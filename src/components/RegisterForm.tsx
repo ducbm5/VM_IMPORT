@@ -588,8 +588,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     }
 
     setStatus('loading');
-    setStatusMessage(`Đang kết nối tới Google Apps Script để import ${parsedRows.length} dòng dữ liệu hợp lệ...`);
-    setStatusDetails(`Target Spreadsheet ID: ${targetSpreadsheetId.trim()}`);
+    setStatusMessage('Đang import dữ liệu...');
+    setStatusDetails('');
 
     try {
       const payloadParticipants: ParticipantRecord[] = parsedRows.map((r, idx) => ({

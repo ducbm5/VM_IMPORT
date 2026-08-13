@@ -37,8 +37,8 @@ export const CreateEventForm: React.FC<CreateEventFormProps> = ({
     }
 
     setStatus('loading');
-    setStatusMessage('Đang kết nối với Google Apps Script để tạo Google Sheet mới trong thư mục chỉ định...');
-    setStatusDetails(`Tên File: "${requester.trim()}" | Folder ID: ${folderId.trim()}`);
+    setStatusMessage('');
+    setStatusDetails('');
     setCreatedEvent(null);
 
     try {
