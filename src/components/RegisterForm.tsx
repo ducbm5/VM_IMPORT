@@ -230,7 +230,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       .replace(/[^a-z0-9]/g, '');
   };
 
-  // Đọc và phân tích File Excel theo đúng 18 cột tiêu chuẩn & VALIDATE DỮ LIỆU
+  // Đọc và phân tích File Excel theo đúng 19 cột tiêu chuẩn & VALIDATE DỮ LIỆU
   const processExcelFile = (file: File) => {
     setFileName(file.name);
     setStatus('loading');
@@ -562,7 +562,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     }, 100);
   };
 
-  // Gửi batch 17 cột sang Google Apps Script
+  // Gửi batch 19 cột sang Google Apps Script
   const handleSubmitBatch = async () => {
     if (parsedRows.length === 0) {
       setStatus('error');
@@ -1176,7 +1176,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             <div className="bg-[#2D2D2D] text-[#F8F6F0] p-4 flex items-center justify-between border-b border-[#2D2D2D]">
               <div className="flex items-center gap-2 font-serif font-bold text-sm">
                 <Edit3 className="w-4 h-4 text-[#F8F6F0]" />
-                <span>CHỈNH SỬA THÔNG TIN VẬN ĐỘNG VIÊN</span>
+                <span>CHỈNH SỬA THÔNG TIN VẬN ĐỘNG VIÊN (19 CỘT)</span>
               </div>
               <button
                 onClick={() => {
@@ -1191,8 +1191,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
             <form onSubmit={handleSaveEditedRow} className="p-4 flex-1 overflow-y-auto space-y-3 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* 1. STT */}
                 <div>
-                  <label className="font-bold block mb-1">STT (Không bắt buộc)</label>
+                  <label className="font-bold block mb-1">1. STT</label>
                   <input
                     type="text"
                     value={editFormData.stt || ''}
@@ -1202,8 +1203,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   />
                 </div>
 
+                {/* 2. HỌ TÊN */}
                 <div>
-                  <label className="font-bold block mb-1">1. HỌ TÊN *</label>
+                  <label className="font-bold block mb-1">2. HỌ TÊN *</label>
                   <input
                     type="text"
                     value={editFormData.hoTen}
@@ -1214,8 +1216,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   />
                 </div>
 
+                {/* 3. EMAIL */}
                 <div>
-                  <label className="font-bold block mb-1">2. EMAIL *</label>
+                  <label className="font-bold block mb-1">3. EMAIL *</label>
                   <input
                     type="email"
                     value={editFormData.email}
@@ -1226,8 +1229,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   />
                 </div>
 
+                {/* 4. TÊN TRÊN BIB */}
                 <div>
-                  <label className="font-bold block mb-1">3. TÊN TRÊN BIB *</label>
+                  <label className="font-bold block mb-1">4. TÊN TRÊN BIB *</label>
                   <input
                     type="text"
                     value={editFormData.tenTrenBib}
@@ -1238,8 +1242,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   />
                 </div>
 
+                {/* 5. CỰ LY */}
                 <div>
-                  <label className="font-bold block mb-1">4. CỰ LY * (5km, 10km, 21km, 42km)</label>
+                  <label className="font-bold block mb-1">5. CỰ LY * (5km, 10km, 21km, 42km)</label>
                   <select
                     value={editFormData.cuLy}
                     onChange={(e) => setEditFormData({ ...editFormData, cuLy: e.target.value })}
@@ -1252,8 +1257,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   </select>
                 </div>
 
+                {/* 6. GIỚI TÍNH */}
                 <div>
-                  <label className="font-bold block mb-1">5. GIỚI TÍNH *</label>
+                  <label className="font-bold block mb-1">6. GIỚI TÍNH *</label>
                   <select
                     value={editFormData.gioiTinh}
                     onChange={(e) => setEditFormData({ ...editFormData, gioiTinh: e.target.value })}
@@ -1264,8 +1270,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   </select>
                 </div>
 
+                {/* 7. NĂM SINH */}
                 <div>
-                  <label className="font-bold block mb-1">6. NGÀY SINH (dd/mm/yyyy) *</label>
+                  <label className="font-bold block mb-1">7. NĂM SINH (dd/mm/yyyy) *</label>
                   <input
                     type="text"
                     value={editFormData.namSinh}
@@ -1276,8 +1283,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   />
                 </div>
 
+                {/* 8. SĐT */}
                 <div>
-                  <label className="font-bold block mb-1">7. SĐT *</label>
+                  <label className="font-bold block mb-1">8. SĐT *</label>
                   <input
                     type="text"
                     value={editFormData.sdt}
@@ -1288,8 +1296,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   />
                 </div>
 
+                {/* 9. CCCD */}
                 <div>
-                  <label className="font-bold block mb-1">8. CCCD / PASSPORT *</label>
+                  <label className="font-bold block mb-1">9. CCCD / PASSPORT *</label>
                   <input
                     type="text"
                     value={editFormData.cccd}
@@ -1300,8 +1309,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   />
                 </div>
 
+                {/* 10. QUỐC TỊCH */}
                 <div>
-                  <label className="font-bold block mb-1">9. QUỐC TỊCH</label>
+                  <label className="font-bold block mb-1">10. QUỐC TỊCH</label>
                   <input
                     type="text"
                     value={editFormData.quocTich}
@@ -1311,8 +1321,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   />
                 </div>
 
+                {/* 11. TỈNH THÀNH */}
                 <div>
-                  <label className="font-bold block mb-1">10. TỈNH THÀNH</label>
+                  <label className="font-bold block mb-1">11. TỈNH THÀNH</label>
                   <input
                     type="text"
                     value={editFormData.tinhThanh}
@@ -1322,8 +1333,22 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   />
                 </div>
 
+                {/* 12. LOẠI ÁO */}
                 <div>
-                  <label className="font-bold block mb-1">11. CỠ ÁO *</label>
+                  <label className="font-bold block mb-1">12. LOẠI ÁO (TSHIRT / SINGLET)</label>
+                  <select
+                    value={editFormData.loaiAo || 'TSHIRT'}
+                    onChange={(e) => setEditFormData({ ...editFormData, loaiAo: e.target.value })}
+                    className="w-full p-2 bg-white border border-[#2D2D2D]"
+                  >
+                    <option value="TSHIRT">TSHIRT (Áo phông - Mặc định)</option>
+                    <option value="SINGLET">SINGLET (Áo ba lỗ)</option>
+                  </select>
+                </div>
+
+                {/* 13. CỠ ÁO */}
+                <div>
+                  <label className="font-bold block mb-1">13. CỠ ÁO *</label>
                   <select
                     value={editFormData.coAo}
                     onChange={(e) => setEditFormData({ ...editFormData, coAo: e.target.value })}
@@ -1339,20 +1364,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   </select>
                 </div>
 
+                {/* 14. CỠ ÁO FINISHER */}
                 <div>
-                  <label className="font-bold block mb-1">11b. LOẠI ÁO (TSHIRT / SINGLET)</label>
-                  <select
-                    value={editFormData.loaiAo || 'TSHIRT'}
-                    onChange={(e) => setEditFormData({ ...editFormData, loaiAo: e.target.value })}
-                    className="w-full p-2 bg-white border border-[#2D2D2D]"
-                  >
-                    <option value="TSHIRT">TSHIRT (Áo phông - Mặc định)</option>
-                    <option value="SINGLET">SINGLET (Áo ba lỗ)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="font-bold block mb-1">11b. CỠ ÁO FINISHER *</label>
+                  <label className="font-bold block mb-1">14. CỠ ÁO FINISHER *</label>
                   <select
                     value={editFormData.coAoFinisher}
                     onChange={(e) => setEditFormData({ ...editFormData, coAoFinisher: e.target.value })}
@@ -1368,8 +1382,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   </select>
                 </div>
 
+                {/* 15. SỐ TIỀN */}
                 <div>
-                  <label className="font-bold block mb-1">12. SỐ TIỀN</label>
+                  <label className="font-bold block mb-1">15. SỐ TIỀN</label>
                   <input
                     type="text"
                     value={editFormData.soTien}
@@ -1379,8 +1394,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   />
                 </div>
 
+                {/* 16. THÀNH TÍCH */}
                 <div>
-                  <label className="font-bold block mb-1">13. THÀNH TÍCH (hh:mm)</label>
+                  <label className="font-bold block mb-1">16. THÀNH TÍCH (hh:mm)</label>
                   <input
                     type="text"
                     value={editFormData.thanhTich}
@@ -1390,8 +1406,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   />
                 </div>
 
+                {/* 17. NGƯỜI LIÊN HỆ KHẨN CẤP */}
                 <div>
-                  <label className="font-bold block mb-1">14. NGƯỜI LH KHẨN CẤP *</label>
+                  <label className="font-bold block mb-1">17. NGƯỜI LH KHẨN CẤP *</label>
                   <input
                     type="text"
                     value={editFormData.nguoiLienHeKhanCap}
@@ -1402,8 +1419,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   />
                 </div>
 
+                {/* 18. SĐT LIÊN HỆ KHẨN CẤP */}
                 <div>
-                  <label className="font-bold block mb-1">15. SĐT LH KHẨN CẤP *</label>
+                  <label className="font-bold block mb-1">18. SĐT LH KHẨN CẤP *</label>
                   <input
                     type="text"
                     value={editFormData.sdtLienHeKhanCap}
@@ -1415,8 +1433,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                 </div>
               </div>
 
+              {/* 19. GHI CHÚ */}
               <div>
-                <label className="font-bold block mb-1">GHI CHÚ</label>
+                <label className="font-bold block mb-1">19. GHI CHÚ</label>
                 <input
                   type="text"
                   value={editFormData.ghiChu}
