@@ -184,6 +184,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   // Hiển thị danh sách 30 Quy tắc Validation ở cuối Bước 2
   const [showValidationRulesList, setShowValidationRulesList] = useState(false);
 
+  // State lưu trữ lỗi validate tiêu đề cột (nếu file không đúng 19 cột tiêu chuẩn)
+  const [headerValidationErrors, setHeaderValidationErrors] = useState<string[]>([]);
+
   // Cấu hình cự ly áp dụng Áo Finisher (mặc định 21km & 42km)
   const [finisherDistances, setFinisherDistances] = useState<string[]>(['21km', '42km']);
 
@@ -238,8 +241,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   // Đọc và phân tích File Excel theo đúng 19 cột tiêu chuẩn & VALIDATE DỮ LIỆU
   const processExcelFile = (file: File) => {
     setFileName(file.name);
+    setHeaderValidationErrors([]);
+    setParsedRows([]);
     setStatus('loading');
-    setStatusMessage(`Đang đọc, khớp tiêu đề cột và kiểm tra validation từ tệp "${file.name}"...`);
+    setStatusMessage(`Đang kiểm tra cấu trúc 19 cột tiêu chuẩn và validate dữ liệu từ tệp "${file.name}"...`);
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -254,100 +259,95 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         if (rawJson.length < 2) {
           setStatus('error');
           setStatusMessage('File Excel rỗng hoặc không có dữ liệu hàng người tham gia.');
+          setStatusDetails('Tệp phải chứa 1 hàng tiêu đề đúng 19 cột và tối thiểu 1 hàng dữ liệu.');
           return;
         }
 
         let headerRowIndex = 0;
         let headerRow: any[] = rawJson[0] || [];
 
-        let matchScore = 0;
-        headerRow.forEach((col) => {
-          const norm = normalizeHeader(col);
-          if (FIELD_MAPPINGS.some((f) => f.aliases.some((a) => normalizeHeader(a) === norm))) {
-            matchScore++;
-          }
-        });
+        // Kiểm tra nếu hàng 0 quá ít cột dữ liệu (thường là hàng tiêu đề/title sự kiện), chuyển sang thử hàng 1
+        const row0Clean = headerRow.map((c) => (c !== null && c !== undefined ? String(c).trim() : ''));
+        const row0NonEmptyCount = row0Clean.filter(Boolean).length;
 
-        if (matchScore === 0 && rawJson.length > 1) {
-          const altHeaderRow = rawJson[1] || [];
-          let altMatchScore = 0;
-          altHeaderRow.forEach((col) => {
-            const norm = normalizeHeader(col);
-            if (FIELD_MAPPINGS.some((f) => f.aliases.some((a) => normalizeHeader(a) === norm))) {
-              altMatchScore++;
-            }
-          });
-          if (altMatchScore > matchScore) {
+        if (row0NonEmptyCount < 3 && rawJson.length > 1) {
+          const row1 = rawJson[1] || [];
+          const row1Clean = row1.map((c) => (c !== null && c !== undefined ? String(c).trim() : ''));
+          const row1NonEmptyCount = row1Clean.filter(Boolean).length;
+          if (row1NonEmptyCount > row0NonEmptyCount) {
             headerRowIndex = 1;
-            headerRow = altHeaderRow;
+            headerRow = row1;
           }
         }
 
-        const colIndexes: Record<keyof ParticipantRecord, number> = {
-          stt: -1,
-          hoTen: -1,
-          email: -1,
-          tenTrenBib: -1,
-          cuLy: -1,
-          gioiTinh: -1,
-          namSinh: -1,
-          sdt: -1,
-          cccd: -1,
-          quocTich: -1,
-          tinhThanh: -1,
-          loaiAo: -1,
-          coAo: -1,
-          coAoFinisher: -1,
-          soTien: -1,
-          thanhTich: -1,
-          nguoiLienHeKhanCap: -1,
-          sdtLienHeKhanCap: -1,
-          ghiChu: -1,
-        };
+        const cleanedHeaders = headerRow.map((c) => (c !== null && c !== undefined ? String(c).trim() : ''));
 
-        let foundCount = 0;
+        // XPRT: Xác định vị trí cột cuối cùng có dữ liệu tiêu đề để tính tổng số cột thực tế
+        let lastNonEmptyIdx = -1;
+        for (let i = cleanedHeaders.length - 1; i >= 0; i--) {
+          if (cleanedHeaders[i] !== '') {
+            lastNonEmptyIdx = i;
+            break;
+          }
+        }
+        const actualColumnCount = lastNonEmptyIdx + 1;
 
-        // Pass 1: Khớp chính xác tiêu đề cột
-        headerRow.forEach((colHeader: any, idx: number) => {
-          if (!colHeader) return;
-          const normCol = normalizeHeader(colHeader);
+        // =========================================================================
+        // BƯỚC 1: VALIDATE BẮT BUỘC ĐÚNG 19 CỘT THEO THỨ TỰ (TRƯỚC KHI VALIDATE DÒNG)
+        // =========================================================================
+        const columnErrors: string[] = [];
 
-          FIELD_MAPPINGS.forEach((field) => {
-            if (colIndexes[field.key] === -1) {
-              const exactMatched = field.aliases.some((alias) => {
-                const normAlias = normalizeHeader(alias);
-                return normCol === normAlias;
-              });
-              if (exactMatched) {
-                colIndexes[field.key] = idx;
-                foundCount++;
-              }
+        // 1.1 Kiểm tra số lượng cột (Phải chính xác 19 cột)
+        if (actualColumnCount < 19) {
+          columnErrors.push(
+            `File Excel bị THIẾU CỘT: Hiện có ${actualColumnCount}/19 cột tiêu chuẩn (thiếu ${19 - actualColumnCount} cột).`
+          );
+        } else if (actualColumnCount > 19) {
+          columnErrors.push(
+            `File Excel bị THỪA CỘT: Hiện có ${actualColumnCount} cột (thừa ${actualColumnCount - 19} cột nội dung khác không nằm trong 19 cột tiêu chuẩn).`
+          );
+        }
+
+        // 1.2 Kiểm tra tên tiêu đề và vị trí từng cột từ 1 đến 19
+        for (let i = 0; i < 19; i++) {
+          const expectedTitle = EXPECTED_COLUMNS[i];
+          const actualHeader = cleanedHeaders[i] || '';
+          const mapping = FIELD_MAPPINGS[i];
+
+          if (!actualHeader) {
+            columnErrors.push(`Cột vị trí ${i + 1} [Kỳ vọng: '${expectedTitle}'] bị BỎ TRỐNG tiêu đề.`);
+          } else {
+            const normActual = normalizeHeader(actualHeader);
+            const isMatch = mapping.aliases.some((alias) => normalizeHeader(alias) === normActual);
+
+            if (!isMatch) {
+              columnErrors.push(
+                `Cột vị trí ${i + 1} sai tiêu đề hoặc sai thứ tự: Kỳ vọng '${expectedTitle}', thực tế trong file là '${actualHeader}'.`
+              );
             }
-          });
-        });
+          }
+        }
 
-        // Pass 2: Khớp một phần tiêu đề cột (dành cho các cột còn trống)
-        headerRow.forEach((colHeader: any, idx: number) => {
-          if (!colHeader) return;
-          if (Object.values(colIndexes).includes(idx)) return; // Đã khớp ở Pass 1
-          const normCol = normalizeHeader(colHeader);
+        // NẾU CÓ LỖI CẤU TRÚC CỘT: DỪNG NGAY VÀ KHÔNG VALIDATE DỮ LIỆU CÁC DÒNG!
+        if (columnErrors.length > 0) {
+          setStatus('error');
+          setStatusMessage(
+            `LỖI CẤU TRÚC CỘT FILE EXCEL: File không đúng 19 cột tiêu chuẩn hoặc sai thứ tự! (${columnErrors.length} lỗi tiêu đề)`
+          );
+          setStatusDetails(
+            `Vui lòng điều chỉnh lại cấu trúc tiêu đề cột theo đúng 19 cột tiêu chuẩn từ 1 đến 19 trước khi tiếp tục.`
+          );
+          setHeaderValidationErrors(columnErrors);
+          setParsedRows([]);
+          setMatchedColumnCount(0);
+          return; // STOP EXECUTION!
+        }
 
-          FIELD_MAPPINGS.forEach((field) => {
-            if (colIndexes[field.key] === -1) {
-              const partialMatched = field.aliases.some((alias) => {
-                const normAlias = normalizeHeader(alias);
-                if (normAlias.length < 3) return normCol === normAlias;
-                return normCol.includes(normAlias);
-              });
-              if (partialMatched) {
-                colIndexes[field.key] = idx;
-                foundCount++;
-              }
-            }
-          });
-        });
-
-        setMatchedColumnCount(foundCount);
+        // =========================================================================
+        // BƯỚC 2: VALIDATE DỮ LIỆU TỪNG DÒNG (CHỈ CHẠY KHI CỘT ĐÃ ĐẠT CHUẨN 100%)
+        // =========================================================================
+        setHeaderValidationErrors([]);
+        setMatchedColumnCount(19);
 
         const extractedRows: ExcelRowItem[] = [];
 
@@ -358,10 +358,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           const hasAnyData = row.some((val: any) => val !== undefined && val !== null && String(val).trim() !== '');
           if (!hasAnyData) continue;
 
-          const getVal = (key: keyof ParticipantRecord, fallbackColIdx: number): string => {
-            const idx = colIndexes[key] !== -1 ? colIndexes[key] : (foundCount === 0 ? fallbackColIdx : -1);
-            if (idx !== -1 && row[idx] !== undefined && row[idx] !== null) {
-              let val = String(row[idx]).trim();
+          const getVal = (colIdx: number): string => {
+            if (row[colIdx] !== undefined && row[colIdx] !== null) {
+              let val = String(row[colIdx]).trim();
               val = val.replace(/\.0$/, '');
               return val;
             }
@@ -369,25 +368,25 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           };
 
           const pItem: ParticipantRecord = {
-            stt: getVal('stt', 0),
-            hoTen: getVal('hoTen', 1),
-            email: getVal('email', 2),
-            tenTrenBib: getVal('tenTrenBib', 3),
-            cuLy: getVal('cuLy', 4),
-            gioiTinh: getVal('gioiTinh', 5),
-            namSinh: getVal('namSinh', 6),
-            sdt: getVal('sdt', 7),
-            cccd: getVal('cccd', 8),
-            quocTich: getVal('quocTich', 9),
-            tinhThanh: getVal('tinhThanh', 10),
-            loaiAo: getVal('loaiAo', 11),
-            coAo: getVal('coAo', 12),
-            coAoFinisher: getVal('coAoFinisher', 13),
-            soTien: getVal('soTien', 14),
-            thanhTich: getVal('thanhTich', 15),
-            nguoiLienHeKhanCap: getVal('nguoiLienHeKhanCap', 16),
-            sdtLienHeKhanCap: getVal('sdtLienHeKhanCap', 17),
-            ghiChu: getVal('ghiChu', 18),
+            stt: getVal(0),
+            hoTen: getVal(1),
+            email: getVal(2),
+            tenTrenBib: getVal(3),
+            cuLy: getVal(4),
+            gioiTinh: getVal(5),
+            namSinh: getVal(6),
+            sdt: getVal(7),
+            cccd: getVal(8),
+            quocTich: getVal(9),
+            tinhThanh: getVal(10),
+            loaiAo: getVal(11),
+            coAo: getVal(12),
+            coAoFinisher: getVal(13),
+            soTien: getVal(14),
+            thanhTich: getVal(15),
+            nguoiLienHeKhanCap: getVal(16),
+            sdtLienHeKhanCap: getVal(17),
+            ghiChu: getVal(18),
           };
 
           if (pItem.hoTen || pItem.sdt || pItem.email || pItem.cuLy) {
@@ -420,7 +419,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           setStatusDetails(`Vui lòng kiểm tra báo cáo lỗi chi tiết ở bên dưới và chỉnh sửa trực tiếp trước khi ghi nhận dữ liệu.`);
         } else {
           setStatus('success');
-          setStatusMessage(`Đã khớp ${foundCount}/${EXPECTED_COLUMNS.length} cột và kiểm tra ${extractedRows.length} dòng. Tất cả đều HỢP LỆ (100% SUCCESS)!`);
+          setStatusMessage(`Cấu trúc 19 cột đạt chuẩn 100% & Kiểm tra ${extractedRows.length} dòng dữ liệu HỢP LỆ (100% SUCCESS)!`);
           setStatusDetails(`Tệp: ${file.name} | Số lượng: ${extractedRows.length} vận động viên.`);
         }
       } catch (err: any) {
@@ -489,6 +488,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
   // Tải dữ liệu thử nghiệm (ĐÃ RUN VALIDATION)
   const handleLoadSampleData = () => {
+    setHeaderValidationErrors([]);
     const sampleItems: ExcelRowItem[] = SAMPLE_RUNNERS.map((runner, idx) => {
       const valResult = validateParticipant(runner, { finisherDistances });
       return {
@@ -837,6 +837,30 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             <span>THỬ DỮ LIỆU MẪU (ĐÃ VALIDATE)</span>
           </button>
         </div>
+
+        {/* LỖI CẤU TRÚC CỘT FILE EXCEL (CẤM NHẬP NẾU SAI 19 CỘT TIÊU CHUẨN) */}
+        {headerValidationErrors.length > 0 && (
+          <div className="p-4 bg-rose-50 border-2 border-rose-600 font-mono space-y-3">
+            <div className="flex items-center gap-2 font-bold text-rose-900 text-xs uppercase">
+              <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
+              <span>LỖI VALIDATE CẤU TRÚC CỘT (FILE EXCEL KHÔNG ĐÚNG 19 CỘT THEO THỨ TỰ)</span>
+            </div>
+            <p className="text-xs text-rose-800 font-sans">
+              Hệ thống bắt buộc file Excel phải chứa <strong>đúng 19 cột tiêu chuẩn theo đúng thứ tự</strong> (không được thiếu hay thừa các cột khác). Vui lòng điều chỉnh lại tiêu đề file theo báo cáo chi tiết dưới đây:
+            </p>
+            <div className="bg-white p-3 border border-rose-300 space-y-1.5 max-h-60 overflow-y-auto">
+              {headerValidationErrors.map((err, idx) => (
+                <div key={idx} className="flex items-start gap-2 text-[11px] text-rose-900">
+                  <span className="font-bold text-rose-600 font-mono shrink-0">•</span>
+                  <span>{err}</span>
+                </div>
+              ))}
+            </div>
+            <div className="pt-1 flex items-center justify-between text-[11px] text-rose-800 font-sans">
+              <span>💡 Bạn có thể bấm <strong>"TẢI FILE EXCEL MẪU 19 CỘT (.XLSX)"</strong> ở trên để tải form mẫu chuẩn.</span>
+            </div>
+          </div>
+        )}
 
         {/* VALIDATION REPORT BANNER & ACTIONS */}
         {parsedRows.length > 0 && (
