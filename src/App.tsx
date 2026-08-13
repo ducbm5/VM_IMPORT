@@ -298,7 +298,7 @@ export default function App() {
                     BƯỚC 1: TẠO FILE GOOGLE SHEET MỚI
                   </div>
                   <div className="text-[10px] opacity-80 mt-0.5">
-                    Nhập tên Người Yêu Cầu để sinh Sheet ID
+                    Nhập Tên Giải - Tên Người Yêu Cầu để sinh Sheet ID
                   </div>
                 </div>
               </div>

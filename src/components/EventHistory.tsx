@@ -21,7 +21,7 @@ export const EventHistory: React.FC<EventHistoryProps> = ({
         <FileSpreadsheet className="w-8 h-8 text-[#2D2D2D] mx-auto mb-2" />
         <p className="text-xs font-bold text-[#2D2D2D] uppercase tracking-wider font-serif">CHƯA CÓ GOOGLE SHEET NÀO ĐƯỢC TẠO</p>
         <p className="text-[11px] text-stone-600 mt-1">
-          Điền thông tin ở "BƯỚC 1: NGƯỜI YÊU CẦU" ở trên để tạo file đầu tiên.
+          Điền thông tin ở "BƯỚC 1: TÊN GIẢI - TÊN NGƯỜI YÊU CẦU" ở trên để tạo file đầu tiên.
         </p>
       </div>
     );
@@ -72,7 +72,7 @@ export const EventHistory: React.FC<EventHistoryProps> = ({
                 </div>
 
                 <div className="text-[11px] text-stone-600 flex flex-wrap items-center gap-3 font-mono">
-                  <span>NGƯỜI YÊU CẦU: <strong className="text-[#2D2D2D]">{ev.requester}</strong></span>
+                  <span>TÊN GIẢI - NGƯỜI YÊU CẦU: <strong className="text-[#2D2D2D]">{ev.requester}</strong></span>
                   <span className="text-stone-300">•</span>
                   <span className="flex items-center gap-1 text-[#2D2D2D]">
                     <Calendar className="w-3 h-3 text-[#2D2D2D]" />

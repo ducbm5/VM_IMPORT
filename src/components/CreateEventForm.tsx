@@ -72,7 +72,7 @@ export const CreateEventForm: React.FC<CreateEventFormProps> = ({
             </span>
             <div>
               <h2 className="text-base font-serif font-bold text-[#F8F6F0]">
-                NGƯỜI YÊU CẦU
+                TÊN GIẢI - TÊN NGƯỜI YÊU CẦU
               </h2>
               <p className="text-[11px] font-mono text-[#E5E2D9]">
                 Khởi tạo file yêu cầu
@@ -92,7 +92,7 @@ export const CreateEventForm: React.FC<CreateEventFormProps> = ({
           {/* Người yêu cầu */}
           <div>
             <label className="block text-xs font-mono font-bold text-[#2D2D2D] uppercase tracking-wider mb-2">
-              NGƯỜI YÊU CẦU * <span className="text-stone-600 font-normal text-[11px]">(DÙNG LÀM TÊN FILE GOOGLE SHEET)</span>
+              TÊN GIẢI - TÊN NGƯỜI YÊU CẦU * <span className="text-stone-600 font-normal text-[11px]">(DÙNG LÀM TÊN FILE GOOGLE SHEET)</span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#2D2D2D]">
@@ -102,7 +102,7 @@ export const CreateEventForm: React.FC<CreateEventFormProps> = ({
                 type="text"
                 value={requester}
                 onChange={(e) => setRequester(e.target.value)}
-                placeholder="Ví dụ: Giải Marathon Hà Nội Open 2026"
+                placeholder="Ví dụ: VnExpress Marathon 2026 - Nguyễn Văn A"
                 required
                 className="w-full pl-9 pr-3 py-2.5 bg-[#F8F6F0] border border-[#2D2D2D] text-xs font-mono text-[#2D2D2D] placeholder-stone-400 focus:outline-none focus:bg-[#E5E2D9] transition-colors"
               />
