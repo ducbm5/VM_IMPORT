@@ -18,11 +18,11 @@ const STORAGE_KEYS = {
 
 export default function App() {
   const [gasUrl, setGasUrl] = useState<string>(() => {
-    return localStorage.getItem(STORAGE_KEYS.GAS_URL) || '';
+    return localStorage.getItem(STORAGE_KEYS.GAS_URL) || (import.meta.env.VITE_GAS_WEB_APP_URL as string) || '';
   });
 
   const [folderId, setFolderId] = useState<string>(() => {
-    return localStorage.getItem(STORAGE_KEYS.FOLDER_ID) || '1Kjc3UYkNkYaHJQ6JrLZX15QPPWfZEaLZ';
+    return localStorage.getItem(STORAGE_KEYS.FOLDER_ID) || (import.meta.env.VITE_GOOGLE_FOLDER_ID as string) || '1Kjc3UYkNkYaHJQ6JrLZX15QPPWfZEaLZ';
   });
 
   const [passSheetId, setPassSheetId] = useState<string>(() => {
@@ -32,7 +32,8 @@ export default function App() {
   const [isMockMode, setIsMockMode] = useState<boolean>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.MOCK_MODE);
     if (saved !== null) return saved === 'true';
-    return !localStorage.getItem(STORAGE_KEYS.GAS_URL);
+    const effectiveGasUrl = localStorage.getItem(STORAGE_KEYS.GAS_URL) || (import.meta.env.VITE_GAS_WEB_APP_URL as string) || '';
+    return !effectiveGasUrl;
   });
 
   const [events, setEvents] = useState<EventItem[]>(() => {

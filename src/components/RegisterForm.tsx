@@ -23,6 +23,8 @@ import {
   Copy,
   Check,
   Shirt,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { StatusBanner } from './StatusBanner';
@@ -178,6 +180,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const [editingRow, setEditingRow] = useState<ExcelRowItem | null>(null);
   const [editFormData, setEditFormData] = useState<ParticipantRecord | null>(null);
   const [copiedJson, setCopiedJson] = useState(false);
+
+  // Hiển thị danh sách 30 Quy tắc Validation ở cuối Bước 2
+  const [showValidationRulesList, setShowValidationRulesList] = useState(false);
 
   // Cấu hình cự ly áp dụng Áo Finisher (mặc định 21km & 42km)
   const [finisherDistances, setFinisherDistances] = useState<string[]>(['21km', '42km']);
@@ -726,7 +731,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#F8F6F0] flex items-center gap-2">
               <Info className="w-4 h-4 text-[#E5E2D9]" />
-              19 CỘT TIÊU CHUẨN & 15 QUY TẮC VALIDATION:
+              19 CỘT TIÊU CHUẨN & 30 QUY TẮC VALIDATION DỮ LIỆU:
             </span>
             <span className="text-[10px] font-mono font-bold bg-[#F8F6F0] text-[#2D2D2D] border border-[#2D2D2D] px-2.5 py-0.5">
               19 / 19 CỘT
@@ -806,7 +811,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                 Kéo thả File Excel (19 cột) vào đây hoặc <span className="underline">bấm để chọn file</span>
               </p>
               <p className="text-[11px] font-mono text-stone-600 mt-1">
-                Tự động kiểm tra và báo cáo lỗi theo 15 quy tắc validation đầu vào
+                Tự động kiểm tra và báo cáo lỗi theo 30 quy tắc validation đầu vào
               </p>
             </div>
           </div>
@@ -1118,6 +1123,113 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             </div>
           </div>
         )}
+
+        {/* Danh sách 30 Quy tắc Validation ở cuối Bước 2 */}
+        <div className="pt-3 border-t border-stone-300/60 font-mono">
+          <button
+            type="button"
+            onClick={() => setShowValidationRulesList(!showValidationRulesList)}
+            className="w-full py-2.5 px-3 bg-[#E5E2D9]/70 hover:bg-[#E5E2D9] text-[#2D2D2D] text-xs font-bold border border-[#2D2D2D]/40 transition-colors flex items-center justify-between cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <Info className="w-4 h-4 text-stone-700" />
+              <span>DANH SÁCH 30 QUY TẮC VALIDATION & CHUẨN HÓA DỮ LIỆU (19 CỘT)</span>
+            </div>
+            <div className="flex items-center gap-1 text-[11px] text-stone-600">
+              <span>{showValidationRulesList ? 'Thu gọn' : 'Xem chi tiết'}</span>
+              {showValidationRulesList ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </div>
+          </button>
+
+          {showValidationRulesList && (
+            <div className="p-4 bg-stone-100/80 border border-stone-300 text-stone-600 text-[11px] leading-relaxed space-y-3.5 mt-2 font-sans">
+              <p className="text-stone-500 italic font-mono text-[10.5px]">
+                * Hệ thống tự động kiểm tra và chuẩn hóa dữ liệu đầu vào khi bạn tải file Excel lên. Dưới đây là chi tiết 30 quy tắc validation được áp dụng cho 19 cột tiêu chuẩn:
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {/* Nhóm 1 */}
+                <div className="p-3 bg-white/80 border border-stone-200/80 space-y-1.5">
+                  <h5 className="font-bold text-[#2D2D2D] uppercase text-[11px] border-b border-stone-200 pb-1 font-mono">
+                    👤 1. THÔNG TIN CÁ NHÂN (HỌ TÊN, EMAIL, BIB)
+                  </h5>
+                  <ul className="list-disc pl-4 space-y-1 text-stone-600">
+                    <li><strong>1. HỌ TÊN:</strong> Bắt buộc nhập.</li>
+                    <li><strong>2. HỌ TÊN cấu trúc:</strong> Tối thiểu 2 từ (Họ + Tên).</li>
+                    <li><strong>3. HỌ TÊN ký tự:</strong> Chỉ chứa chữ cái và khoảng trắng.</li>
+                    <li><strong>4. EMAIL:</strong> Bắt buộc nhập.</li>
+                    <li><strong>5. EMAIL cấu trúc:</strong> Phải đúng định dạng chuẩn (user@domain.com).</li>
+                    <li><strong>6. TÊN TRÊN BIB:</strong> Bắt buộc nhập.</li>
+                    <li><strong>7. TÊN TRÊN BIB độ dài:</strong> Tối đa 20 ký tự.</li>
+                    <li><strong>8. TÊN TRÊN BIB ký tự:</strong> Chỉ cho phép chữ cái, số và khoảng trắng.</li>
+                  </ul>
+                </div>
+
+                {/* Nhóm 2 */}
+                <div className="p-3 bg-white/80 border border-stone-200/80 space-y-1.5">
+                  <h5 className="font-bold text-[#2D2D2D] uppercase text-[11px] border-b border-stone-200 pb-1 font-mono">
+                    🏃 2. CỰ LY, GIỚI TÍNH & ĐỘ TUỔI
+                  </h5>
+                  <ul className="list-disc pl-4 space-y-1 text-stone-600">
+                    <li><strong>9. CỰ LY:</strong> Bắt buộc nhập (5km, 10km, 21km, 42km).</li>
+                    <li><strong>10. GIỚI TÍNH:</strong> Bắt buộc nhập (Nam / Nữ).</li>
+                    <li><strong>11. NĂM SINH / NGÀY SINH:</strong> Bắt buộc nhập.</li>
+                    <li><strong>12. QUY CHUẨN NĂM SINH:</strong> Tự chuẩn hóa dd/mm/yyyy từ chuỗi, năm sinh, số Excel.</li>
+                    <li><strong>13. TUỔI CỰ LY 42KM:</strong> Bắt buộc từ 18 tuổi trở lên.</li>
+                    <li><strong>14. TUỔI CỰ LY 21KM:</strong> Bắt buộc từ 16 tuổi trở lên.</li>
+                    <li><strong>15. TUỔI CỰ LY 10KM & 5KM:</strong> 10km từ 12 tuổi; 5km từ 4 tuổi.</li>
+                  </ul>
+                </div>
+
+                {/* Nhóm 3 */}
+                <div className="p-3 bg-white/80 border border-stone-200/80 space-y-1.5">
+                  <h5 className="font-bold text-[#2D2D2D] uppercase text-[11px] border-b border-stone-200 pb-1 font-mono">
+                    🪪 3. ĐỊNH DANH & SĐT CÁ NHÂN
+                  </h5>
+                  <ul className="list-disc pl-4 space-y-1 text-stone-600">
+                    <li><strong>16. SĐT cá nhân:</strong> Bắt buộc nhập.</li>
+                    <li><strong>17. CHUẨN HÓA SĐT:</strong> Xóa khoảng trắng/dấu/đuôi .0 Excel; tự thêm số 0 nếu 9 số (10-11 số).</li>
+                    <li><strong>18. CCCD / CMND / PASSPORT:</strong> Bắt buộc nhập.</li>
+                    <li><strong>19. CCCD định dạng:</strong> Phải đủ 9-12 chữ số hoặc mã Hộ chiếu hợp lệ.</li>
+                    <li><strong>20. QUỐC TỊCH:</strong> Tự động gán "Việt Nam" nếu bỏ trống.</li>
+                    <li><strong>21. TỈNH THÀNH:</strong> Cho phép bỏ trống hoặc nhập tự do.</li>
+                  </ul>
+                </div>
+
+                {/* Nhóm 4 */}
+                <div className="p-3 bg-white/80 border border-stone-200/80 space-y-1.5">
+                  <h5 className="font-bold text-[#2D2D2D] uppercase text-[11px] border-b border-stone-200 pb-1 font-mono">
+                    👕 4. ÁO EVENT & ÁO FINISHER
+                  </h5>
+                  <ul className="list-disc pl-4 space-y-1 text-stone-600">
+                    <li><strong>22. CỠ ÁO EVENT:</strong> Bắt buộc nhập (2XS, XS, S, M, L, XL, 2XL).</li>
+                    <li><strong>23. LOẠI ÁO:</strong> Tự gán "TSHIRT" nếu trống. Chỉ nhận TSHIRT hoặc SINGLET.</li>
+                    <li><strong>24. CỠ ÁO FINISHER:</strong> Bắt buộc nhập nếu chạy cự ly áp dụng Áo Finisher (21km/42km).</li>
+                  </ul>
+                </div>
+
+                {/* Nhóm 5 */}
+                <div className="p-3 bg-white/80 border border-stone-200/80 space-y-1.5 col-span-1 md:col-span-2">
+                  <h5 className="font-bold text-[#2D2D2D] uppercase text-[11px] border-b border-stone-200 pb-1 font-mono">
+                    🚨 5. SỐ TIỀN, THÀNH TÍCH & NGƯỜI LIÊN HỆ KHẨN CẤP
+                  </h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <ul className="list-disc pl-4 space-y-1 text-stone-600">
+                      <li><strong>25. SỐ TIỀN:</strong> Tự do / Số nguyên dương.</li>
+                      <li><strong>26. THÀNH TÍCH (PR/PB):</strong> Tự quy chuẩn về dạng hh:mm (24h) từ 12:45 AM, 1h45m, v.v.</li>
+                      <li><strong>27. NGƯỜI LH KHẨN CẤP:</strong> Bắt buộc nhập.</li>
+                    </ul>
+                    <ul className="list-disc pl-4 space-y-1 text-stone-600">
+                      <li><strong>28. KHÔNG TRÙNG TÊN:</strong> Tên Người khẩn cấp không trùng với Tên VĐV.</li>
+                      <li><strong>29. SĐT LH KHẨN CẤP:</strong> Bắt buộc nhập (10-11 số).</li>
+                      <li><strong>30. KHÔNG TRÙNG SĐT:</strong> SĐT Khẩn cấp không trùng với SĐT cá nhân của VĐV.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* MODAL XEM CẤU TRÚC JSON VALIDATION (OUTPUT) */}
