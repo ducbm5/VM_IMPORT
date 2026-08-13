@@ -1,0 +1,6 @@
+{
+  "name": "VM Validate Form",
+  "description": "Ứng dụng tạo Form sự kiện tự động kết nối với Google Apps Script và Google Sheets",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

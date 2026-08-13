@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Merriweather", Georgia, Cambria, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --color-paper: #F8F6F0;
+  --color-charcoal: #2D2D2D;
+  --color-divider: #E0DDD5;
+  --color-editorial: #E5E2D9;
+}
+
+:root {
+  font-family: "Merriweather", Georgia, serif;
+  background-color: #F8F6F0;
+  color: #2D2D2D;
+}
+
+body {
+  background-color: #F8F6F0;
+  color: #2D2D2D;
+}
+
+/* Editorial Neo-Brutalism Hairline Borders & Strict Flat Geometry */
+*, *::before, *::after {
+  border-radius: 0px !important;
+  box-shadow: none !important;
+}
+
+/* Custom Scrollbar for Editorial Neo-Brutalist styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #E5E2D9;
+  border-left: 1px solid #2D2D2D;
+}
+::-webkit-scrollbar-thumb {
+  background: #2D2D2D;
+}
+
