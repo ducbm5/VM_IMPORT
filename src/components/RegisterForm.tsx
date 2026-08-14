@@ -944,7 +944,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             </label>
 
             <span className="text-[10px] text-stone-500 italic">
-              💡 Quy tắc: "10" / "10:00" → 00:10 | "1h30p" → 01:30 | Ô trống → D
+              💡 Quy tắc: Dưới 2h30 → 02:29 (-1p) | Trên 1 giờ → 01:01 (+1p) | "10" / "10:00" → 00:10 | Ô trống → D
             </span>
           </div>
         </div>
@@ -1365,7 +1365,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   </h5>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <ul className="list-disc pl-4 space-y-1 text-stone-600">
-                      <li><strong>25. THÀNH TÍCH (PR/PB):</strong> Tự động chuẩn hóa bằng AI Gemini về <code>hh:mm</code> hoặc chữ <code>D</code> nếu trống (Ví dụ: "10" / "10 phút" / "10:00" → 00:10 | "1h30p" → 01:30 | Bỏ trống / null → D).</li>
+                      <li><strong>25. THÀNH TÍCH (PR/PB):</strong> Tự động chuẩn hóa bằng AI Gemini về <code>hh:mm</code> hoặc chữ <code>D</code> nếu trống (Ví dụ: "Dưới 2h30 phút" → 02:29 | "Trên 1 giờ" → 01:01 | "10" / "10:00" → 00:10 | Bỏ trống / null → D).</li>
                       <li><strong>26. NGƯỜI LH KHẨN CẤP:</strong> Bắt buộc nhập.</li>
                       <li><strong>27. KHÔNG TRÙNG TÊN:</strong> Tên Người khẩn cấp không trùng với Tên VĐV.</li>
                     </ul>
@@ -1670,7 +1670,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                     placeholder="Ví dụ: 00:10, 01:30 hoặc D"
                   />
                   <p className="text-[10px] text-stone-500 mt-0.5">
-                    * Bỏ trống tự gán là "D" | "10" / "10 phút" / "10:00" → "00:10" | "1h30p" → "01:30"
+                    * Bỏ trống tự gán "D" | "Dưới 2h30 phút" → "02:29" (-1p) | "Trên 1 giờ" → "01:01" (+1p) | "10" → "00:10"
                   </p>
                 </div>
 

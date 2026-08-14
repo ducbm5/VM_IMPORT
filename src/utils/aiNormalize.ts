@@ -12,11 +12,18 @@ export interface AiNormalizeBatchResponse {
 /**
  * Heuristic fallback matching the exact rules:
  * 1. Nếu ô trống, thiếu dữ liệu, null, hoặc không có thông tin thời gian -> Trả về chữ: D
- * 2. Xác định giá trị Thời gian (Phút và Giờ):
+ * 2. Quy tắc "DƯỚI" (-1 phút) và "TRÊN" / "HƠN" (+1 phút):
+ *    - Dưới 2h30 phút -> 02:29
+ *    - Dưới 1 giờ -> 00:59
+ *    - Dưới 10 phút -> 00:09
+ *    - Trên 1 giờ -> 01:01
+ *    - Trên 2h30 -> 02:31
+ *    - Trên 45 phút -> 00:46
+ * 3. Xác định giá trị Thời gian cơ sở (Phút và Giờ):
  *    - Mặc định các số biểu thị phút nếu không chỉ rõ giờ (VD: "10phút", "10 phút", "10'", "10 p", "10p", "10" -> "00:10")
  *    - Nếu dạng "10:00" -> "00:10" (10 phút 00 giây)
  *    - Nếu có chỉ rõ giờ (VD: "1h30p", "1 giờ 15 phút", "01:30:00") -> "01:30", "01:15", "01:30"
- * 3. Định dạng đầu ra: hh:mm hoặc D
+ * 4. Định dạng đầu ra: hh:mm hoặc D
  */
 export function normalizePerformanceLocal(rawInput: any): string {
   if (rawInput === null || rawInput === undefined) return 'D';
@@ -27,10 +34,31 @@ export function normalizePerformanceLocal(rawInput: any): string {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   }
 
-  const rawStr = String(rawInput).trim();
+  let rawStr = String(rawInput).trim();
   if (!rawStr || rawStr === '' || rawStr.toUpperCase() === 'D' || rawStr === '-' || rawStr === 'null' || rawStr === 'undefined') {
     return 'D';
   }
+
+  // Nhận diện tiền tố Dưới (<) hoặc Trên / Hơn (>)
+  let minuteOffset = 0;
+  const isUnder = /^(?:dưới|<|ít hơn|duoi)\s+/i.test(rawStr) || /^<\s*\d+/i.test(rawStr);
+  const isOver = /^(?:trên|>|hơn|tren|hon)\s+/i.test(rawStr) || /^>\s*\d+/i.test(rawStr);
+
+  if (isUnder) {
+    minuteOffset = -1;
+    rawStr = rawStr.replace(/^(?:dưới|<|ít hơn|duoi)\s*/i, '').trim();
+  } else if (isOver) {
+    minuteOffset = 1;
+    rawStr = rawStr.replace(/^(?:trên|>|hơn|tren|hon)\s*/i, '').trim();
+  }
+
+  const formatWithOffset = (totalMins: number): string => {
+    let adjusted = totalMins + minuteOffset;
+    if (adjusted < 0) adjusted = 0;
+    const hours = Math.floor(adjusted / 60) % 24;
+    const mins = adjusted % 60;
+    return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+  };
 
   // 1. Dạng AM / PM (ví dụ: "12:45 AM" -> "00:45", "1:15 PM" -> "13:15")
   const ampmMatch = rawStr.match(/^(\d{1,2}):(\d{1,2})(?::\d{1,2})?\s*(AM|PM)$/i);
@@ -40,7 +68,7 @@ export function normalizePerformanceLocal(rawInput: any): string {
     const period = ampmMatch[3].toUpperCase();
     if (period === 'AM' && hours === 12) hours = 0;
     else if (period === 'PM' && hours < 12) hours += 12;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    return formatWithOffset(hours * 60 + minutes);
   }
 
   // 2. Dạng 3 thành phần hh:mm:ss (ví dụ "01:30:00", "00:10:00", "02:15:30")
@@ -49,40 +77,36 @@ export function normalizePerformanceLocal(rawInput: any): string {
     const h = parseInt(hmsMatch[1], 10);
     const m = parseInt(hmsMatch[2], 10);
     if (h >= 0 && h < 24 && m >= 0 && m < 60) {
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      return formatWithOffset(h * 60 + m);
     }
   }
 
   // 3. Dạng "10:00" trong thể thao chạy/bơi: "10:00" là 10 phút 00 giây -> 00:10
-  // Nếu là 1 chữ số như "1:45" -> thường là 1h45p hoặc 1m45s. Nhưng nếu 2 chữ số phút như "10:00", "25:00", "45:00", "59:00" -> 00:10, 00:25, 00:45, 00:59
   const mmSsMatch = rawStr.match(/^(\d{1,2}):00$/);
   if (mmSsMatch) {
     const mins = parseInt(mmSsMatch[1], 10);
     if (mins >= 0 && mins < 60) {
-      // 10:00 -> 00:10 (10 phút 00 giây)
-      return `00:${String(mins).padStart(2, '0')}`;
+      return formatWithOffset(mins);
     }
   }
 
-  // Dạng mm:ss khác (ví dụ "10:30" nếu là 10 phút 30 giây -> làm tròn hoặc lấy 00:10 nếu quy đổi sang hh:mm)
-  // Nếu dạng "01:30" (có số 0 ở đầu) -> 01:30 (1h30)
-  const twoNumMatch = rawStr.match(/^(\d{1,2}):(\d{1,2})$/);
-  if (twoNumMatch) {
-    const num1 = parseInt(twoNumMatch[1], 10);
-    const num2 = parseInt(twoNumMatch[2], 10);
-    // Nếu num1 >= 1 và < 24 và num2 < 60
-    if (num1 >= 0 && num1 < 24 && num2 >= 0 && num2 < 60) {
-      return `${String(num1).padStart(2, '0')}:${String(num2).padStart(2, '0')}`;
-    }
-  }
-
-  // 4. Dạng chữ chỉ rõ giờ và phút: "1h30p", "1 giờ 15 phút", "1h 30m", "1 tiếng 30 phút"
+  // 4. Dạng chữ chỉ rõ giờ và phút: "2h30 phút", "1h30p", "1 giờ 15 phút", "1 giờ", "1h 30m", "1 tiếng 30 phút"
   const hourMinMatch = rawStr.match(/(?:(\d+)\s*(?:h|giờ|tiếng|g))?\s*(?:(\d+)\s*(?:p|phút|m|'))?/i);
   if (hourMinMatch && (hourMinMatch[1] || hourMinMatch[2])) {
     const hours = hourMinMatch[1] ? parseInt(hourMinMatch[1], 10) : 0;
     const minutes = hourMinMatch[2] ? parseInt(hourMinMatch[2], 10) : 0;
     if (hours < 24 && minutes < 60) {
-      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      return formatWithOffset(hours * 60 + minutes);
+    }
+  }
+
+  // Dạng mm:ss khác (ví dụ "01:30" hoặc "1:45")
+  const twoNumMatch = rawStr.match(/^(\d{1,2}):(\d{1,2})$/);
+  if (twoNumMatch) {
+    const num1 = parseInt(twoNumMatch[1], 10);
+    const num2 = parseInt(twoNumMatch[2], 10);
+    if (num1 >= 0 && num1 < 24 && num2 >= 0 && num2 < 60) {
+      return formatWithOffset(num1 * 60 + num2);
     }
   }
 
@@ -91,9 +115,7 @@ export function normalizePerformanceLocal(rawInput: any): string {
   if (minOnlyMatch) {
     const totalMinutes = parseInt(minOnlyMatch[1], 10);
     if (!isNaN(totalMinutes)) {
-      const hours = Math.floor(totalMinutes / 60) % 24;
-      const mins = totalMinutes % 60;
-      return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+      return formatWithOffset(totalMinutes);
     }
   }
 
@@ -101,9 +123,7 @@ export function normalizePerformanceLocal(rawInput: any): string {
   const numVal = Number(rawStr);
   if (!isNaN(numVal) && numVal > 0 && numVal < 1) {
     const totalMinutes = Math.round(numVal * 24 * 60);
-    const hours = Math.floor(totalMinutes / 60) % 24;
-    const minutes = totalMinutes % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    return formatWithOffset(totalMinutes);
   }
 
   return 'D';

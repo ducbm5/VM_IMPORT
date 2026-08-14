@@ -33,14 +33,25 @@ Nhận danh sách dữ liệu đầu vào từ người dùng (ở cột THÀNH 
 
 ĐIỀU KIỆN & QUY TẮC CHUẨN HÓA:
 1. Nếu ô trống, thiếu dữ liệu, null, hoặc không có thông tin thời gian -> Trả về chữ: D
-2. Xác định giá trị Thời gian (Phút và Giờ):
+2. Quy tắc tiền tố "DƯỚI" và "TRÊN" / "HƠN":
+   - "Dưới" (hoặc ký hiệu "<"): Tính mốc thời gian cơ sở rồi TRỪ ĐI 1 PHÚT.
+     + Ví dụ: "Dưới 2h30 phút" / "Dưới 2h30" / "< 2h30" -> 02:29
+     + Ví dụ: "Dưới 1 giờ" / "Dưới 1h" -> 00:59
+     + Ví dụ: "Dưới 10 phút" / "Dưới 10p" -> 00:09
+     + Ví dụ: "Dưới 45 phút" -> 00:44
+   - "Trên" hoặc "Hơn" (hoặc ký hiệu ">"): Tính mốc thời gian cơ sở rồi CỘNG THÊM 1 PHÚT.
+     + Ví dụ: "Trên 1 giờ" / "Trên 1h" / "> 1h" -> 01:01
+     + Ví dụ: "Trên 2h30" / "Hơn 2h30 phút" -> 02:31
+     + Ví dụ: "Trên 45 phút" / "Trên 45p" -> 00:46
+     + Ví dụ: "Trên 10 phút" -> 00:11
+3. Xác định giá trị Thời gian cơ sở (Phút và Giờ):
    - Mặc định các số biểu thị phút nếu không chỉ rõ giờ (Ví dụ: "10phút", "10 phút", "10'", "10 p", "10p", "10" đều hiểu là 10 phút -> quy đổi thành 00:10).
    - Nếu dạng "10:00":
      + Ngữ cảnh thành tích thể thao ngắn/trung bình thông thường (chạy, bơi...): "10:00" là 10 phút 00 giây -> quy đổi thành 00:10.
      + Nếu có chỉ rõ giờ (VD: "1h30p", "1 giờ 15 phút", "01:30:00") -> quy đổi chính xác về hh:mm tương ứng (VD: 01:30).
      + Nếu dạng 3 thành phần hh:mm:ss như "01:30:00", "02:15:30" -> quy đổi thành "01:30", "02:15".
      + Nếu "1:45" có thể là 1 giờ 45 phút -> "01:45".
-3. Định dạng đầu ra bắt buộc:
+4. Định dạng đầu ra bắt buộc:
    - Giờ và phút luôn có 2 chữ số (hh:mm).
    - Không kèm theo bất kỳ văn bản giải thích nào khác.
    - Nếu trường THÀNH TÍCH đó bỏ trống hoặc không có giá trị thì để là chữ D`;
