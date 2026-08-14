@@ -1,13 +1,13 @@
 export const GAS_CODE_GS = `/**
  * GOOGLE APPS SCRIPT - CODE.GS
- * Hệ thống tự động tạo Google Sheet theo Tên File & Import 19 Cột Dữ Liệu Sự Kiện / Giải Chạy
+ * Hệ thống tự động tạo Google Sheet theo Tên File & Import 18 Cột Dữ Liệu Sự Kiện / Giải Chạy
  * 
  * HƯỚNG DẪN TRIỂN KHAI:
  * 1. Truy cập https://script.google.com/ và tạo Dự án mới (New Project).
  * 2. Dán toàn bộ đoạn mã này vào tệp Code.gs.
  * 3. Nhấn "Triển khai" (Deploy) -> "Thực thi dưới dạng ứng dụng web" (New deployment -> Web app).
  * 4. Cấu hình triển khai:
- *    - Mô tả: Event Auto Connector (19 Fields)
+ *    - Mô tả: Event Auto Connector (18 Fields)
  *    - Thực thi dưới danh nghĩa: "Tôi" (Me - account Google của bạn)
  *    - Ai có quyền truy cập: "Bất kỳ ai" (Anyone - để Web gọi API không bị chặn)
  * 5. Nhấn "Triển khai" (Deploy), cấp quyền truy cập khi được hỏi.
@@ -112,7 +112,7 @@ function handleCreateEvent(data) {
     }
   }
 
-  // 19 cột tiêu chuẩn chính xác theo yêu cầu
+  // 18 cột tiêu chuẩn chính xác theo yêu cầu
   var sheet = spreadsheet.getActiveSheet();
   sheet.setName("Danh sách đăng ký");
 
@@ -132,7 +132,6 @@ function handleCreateEvent(data) {
     "LOẠI ÁO",
     "CỠ ÁO",
     "CỠ ÁO FINISHER",
-    "SỐ TIỀN",
     "THÀNH TÍCH",
     "NGƯỜI LIÊN HỆ KHẨN CẤP",
     "SĐT LIÊN HỆ KHẨN CẤP",
@@ -185,7 +184,7 @@ function testCreateEvent() {
 
 /**
  * 2. ACTION: SUBMIT_FORM
- * Ghi danh sách 19 cột dữ liệu từ File Excel Import vào Google Sheet
+ * Ghi danh sách 18 cột dữ liệu từ File Excel Import vào Google Sheet
  */
 function handleSubmitForm(data) {
   var spreadsheetId = data.spreadsheetId;
@@ -233,7 +232,6 @@ function handleSubmitForm(data) {
         p.loaiAo || p["LOẠI ÁO"] || p["Loại áo"] || p["Loai ao"] || "",
         p.coAo || p["CỠ ÁO"] || p["Cỡ áo"] || "",
         p.coAoFinisher || p["CỠ ÁO FINISHER"] || p["Cỡ áo Finisher"] || "",
-        p.soTien || p["SỐ TIỀN"] || p["Số tiền"] || "",
         p.thanhTich || p["THÀNH TÍCH"] || p["Thành tích"] || "",
         p.nguoiLienHeKhanCap || p["NGƯỜI LIÊN HỆ KHẨN CẤP"] || p["Người liên hệ khẩn cấp"] || "",
         p.sdtLienHeKhanCap || p["SĐT LIÊN HỆ KHẨN CẤP"] || p["SĐT liên hệ khẩn cấp"] || "",
@@ -243,12 +241,12 @@ function handleSubmitForm(data) {
 
     // Ghi hàng loạt vào Sheet
     var lastRow = sheet.getLastRow();
-    var range = sheet.getRange(lastRow + 1, 1, rowsToAdd.length, 20);
+    var range = sheet.getRange(lastRow + 1, 1, rowsToAdd.length, 19);
     range.setValues(rowsToAdd);
 
     return {
       success: true,
-      message: "Đã import thành công " + rowsToAdd.length + " hàng dữ liệu (19 cột) vào Google Sheet!",
+      message: "Đã import thành công " + rowsToAdd.length + " hàng dữ liệu (18 cột) vào Google Sheet!",
       spreadsheetId: spreadsheetId,
       insertedCount: rowsToAdd.length,
       timestamp: timestamp

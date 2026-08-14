@@ -189,7 +189,7 @@ export default function App() {
     }
   };
 
-  // Action 2: SUBMIT_FORM (Batch import 19 cột từ File Excel)
+  // Action 2: SUBMIT_FORM (Batch import 18 cột từ File Excel)
   const handleSubmitBatch = async (data: {
     participants: ParticipantRecord[];
     spreadsheetId: string;
@@ -339,7 +339,7 @@ export default function App() {
                 </span>
                 <div>
                   <div className="text-xs font-serif font-bold uppercase tracking-wider flex items-center gap-2">
-                    <span>BƯỚC 2: IMPORT FILE EXCEL (19 CỘT)</span>
+                    <span>BƯỚC 2: IMPORT FILE EXCEL (18 CỘT)</span>
                     {!isStep2Unlocked && <Lock className="w-3.5 h-3.5 text-stone-500" />}
                   </div>
                   <div className="text-[10px] opacity-80 mt-0.5">

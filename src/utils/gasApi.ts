@@ -125,7 +125,7 @@ export async function mockGasCall(
 
     return {
       success: true,
-      message: `[MOCK ENGINE] Đã import ${insertedCount} dòng dữ liệu (19 cột) từ File Excel vào Google Sheet (ID: ${spreadsheetId.substring(0, 8)}...) thành công!`,
+      message: `[MOCK ENGINE] Đã import ${insertedCount} dòng dữ liệu (18 cột) từ File Excel vào Google Sheet (ID: ${spreadsheetId.substring(0, 8)}...) thành công!`,
       spreadsheetId: spreadsheetId,
       insertedCount: insertedCount,
       timestamp: new Date().toLocaleString('vi-VN'),

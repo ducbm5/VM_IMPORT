@@ -25,11 +25,15 @@ import {
   Shirt,
   ChevronDown,
   ChevronUp,
+  Bot,
+  Zap,
+  Wand2,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { StatusBanner } from './StatusBanner';
 import { EventItem, ExcelRowItem, ParticipantRecord, BatchRegistrationResult } from '../types';
 import { validateParticipant, ValidationOutput } from '../utils/validator';
+import { normalizePerformancesWithAi, normalizeSinglePerformanceWithAi } from '../utils/aiNormalize';
 
 interface RegisterFormProps {
   selectedEvent: EventItem | null;
@@ -44,7 +48,7 @@ interface RegisterFormProps {
   onGoToStep1?: () => void;
 }
 
-// 19 cột tiêu chuẩn chính xác theo yêu cầu
+// 18 cột tiêu chuẩn chính xác theo yêu cầu
 export const EXPECTED_COLUMNS = [
   'STT',
   'HỌ TÊN',
@@ -60,7 +64,6 @@ export const EXPECTED_COLUMNS = [
   'LOẠI ÁO',
   'CỠ ÁO',
   'CỠ ÁO FINISHER',
-  'SỐ TIỀN',
   'THÀNH TÍCH',
   'NGƯỜI LIÊN HỆ KHẨN CẤP',
   'SĐT LIÊN HỆ KHẨN CẤP',
@@ -83,7 +86,6 @@ const FIELD_MAPPINGS: Array<{ key: keyof ParticipantRecord; title: string; alias
   { key: 'loaiAo', title: 'LOẠI ÁO', aliases: ['loai ao', 'loại áo', 'kieu ao', 'kiểu áo', 'shirt type', 'shirt style', 'style', 'type', 'loai_ao'] },
   { key: 'coAo', title: 'CỠ ÁO', aliases: ['co ao', 'cỡ áo', 'size ao', 'shirt size', 'size'] },
   { key: 'coAoFinisher', title: 'CỠ ÁO FINISHER', aliases: ['co ao finisher', 'cỡ áo finisher', 'finisher size'] },
-  { key: 'soTien', title: 'SỐ TIỀN', aliases: ['so tien', 'số tiền', 'amount', 'fee', 'gia ve', 'lệ phí'] },
   { key: 'thanhTich', title: 'THÀNH TÍCH', aliases: ['thanh tich', 'thành tích', 'result', 'time', 'pb', 'pacing'] },
   { key: 'nguoiLienHeKhanCap', title: 'NGƯỜI LIÊN HỆ KHẨN CẤP', aliases: ['nguoi lien he khan cap', 'người liên hệ khẩn cấp', 'emergency contact', 'người thân'] },
   { key: 'sdtLienHeKhanCap', title: 'SĐT LIÊN HỆ KHẨN CẤP', aliases: ['sdt lien he khan cap', 'sđt liên hệ khẩn cấp', 'sdt khan cap', 'sđt khẩn cấp', 'so dien thoai khan cap', 'số điện thoại khẩn cấp', 'sdt nguoi than', 'sđt người thân', 'emergency phone', 'emergency contact phone'] },
@@ -107,7 +109,6 @@ const SAMPLE_RUNNERS: ParticipantRecord[] = [
     coAo: 'L',
     loaiAo: 'TSHIRT',
     coAoFinisher: 'L',
-    soTien: '750000',
     thanhTich: '01:45',
     nguoiLienHeKhanCap: 'Nguyễn Thị Hoa',
     sdtLienHeKhanCap: '0912345678',
@@ -128,7 +129,6 @@ const SAMPLE_RUNNERS: ParticipantRecord[] = [
     coAo: 'M',
     loaiAo: 'SINGLET',
     coAoFinisher: 'M',
-    soTien: '1100000',
     thanhTich: '03:50',
     nguoiLienHeKhanCap: 'Lê Văn Tuấn',
     sdtLienHeKhanCap: '0978112233',
@@ -149,7 +149,6 @@ const SAMPLE_RUNNERS: ParticipantRecord[] = [
     coAo: 'XL',
     loaiAo: 'TSHIRT',
     coAoFinisher: 'XL',
-    soTien: '450000',
     thanhTich: '00:52',
     nguoiLienHeKhanCap: 'Phạm Hồng Nhung',
     sdtLienHeKhanCap: '0944556677',
@@ -181,6 +180,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const [editFormData, setEditFormData] = useState<ParticipantRecord | null>(null);
   const [copiedJson, setCopiedJson] = useState(false);
 
+  // State cho AI Gemini Chuẩn hóa THÀNH TÍCH
+  const [isAiNormalizing, setIsAiNormalizing] = useState(false);
+  const [autoAiNormalizeOnUpload, setAutoAiNormalizeOnUpload] = useState(true);
+  const [isAiNormalizingSingle, setIsAiNormalizingSingle] = useState(false);
+
   // Hiển thị danh sách 30 Quy tắc Validation ở cuối Bước 2
   const [showValidationRulesList, setShowValidationRulesList] = useState(false);
 
@@ -189,6 +193,62 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
   // Cấu hình cự ly áp dụng Áo Finisher (mặc định 21km & 42km)
   const [finisherDistances, setFinisherDistances] = useState<string[]>(['21km', '42km']);
+
+  // Hàm kích hoạt AI Gemini chuẩn hóa toàn bộ cột THÀNH TÍCH về hh:mm / D
+  const handleAiNormalizeBatch = async () => {
+    if (parsedRows.length === 0) {
+      setStatus('error');
+      setStatusMessage('Chưa có dữ liệu vận động viên nào trong bảng để AI xử lý.');
+      return;
+    }
+
+    setIsAiNormalizing(true);
+    setStatus('loading');
+    setStatusMessage(`⚡ Đang gọi AI Gemini chuẩn hóa cột THÀNH TÍCH cho ${parsedRows.length} vận động viên...`);
+    setStatusDetails('Quy chuẩn về dạng hh:mm (24h) hoặc D theo đúng quy tắc thể thao.');
+
+    try {
+      const rawPerformances = parsedRows.map((r) => r.thanhTich || '');
+      const normalizedResults = await normalizePerformancesWithAi(rawPerformances);
+
+      const updatedRows = parsedRows.map((row, idx) => {
+        const normVal = normalizedResults[idx] || 'D';
+        const updatedRowData = { ...row, thanhTich: normVal };
+        const valResult = validateParticipant(updatedRowData, { finisherDistances });
+        return {
+          ...updatedRowData,
+          ...(valResult.data || {}),
+          validationOutput: valResult,
+        };
+      });
+
+      setParsedRows(updatedRows);
+      const invalidCount = updatedRows.filter((r) => r.validationOutput?.status === 'ERROR').length;
+
+      setStatus('success');
+      setStatusMessage(`✨ AI đã chuẩn hóa thành công ${updatedRows.length} giá trị Thành tích về định dạng chuẩn hh:mm / D!`);
+      setStatusDetails(`Kết quả kiểm tra: ${updatedRows.length - invalidCount}/${updatedRows.length} dòng hợp lệ 100%.`);
+    } catch (err: any) {
+      setStatus('error');
+      setStatusMessage(`Lỗi khi AI xử lý chuẩn hóa thành tích: ${err.message || ''}`);
+    } finally {
+      setIsAiNormalizing(false);
+    }
+  };
+
+  // Hàm kích hoạt AI Gemini chuẩn hóa 1 trường thành tích trong modal sửa dòng
+  const handleAiNormalizeSingle = async () => {
+    if (!editFormData) return;
+    setIsAiNormalizingSingle(true);
+    try {
+      const norm = await normalizeSinglePerformanceWithAi(editFormData.thanhTich || '');
+      setEditFormData({ ...editFormData, thanhTich: norm });
+    } catch (err) {
+      console.error('AI single normalize error:', err);
+    } finally {
+      setIsAiNormalizingSingle(false);
+    }
+  };
 
   const toggleFinisherDistance = (dist: string) => {
     const updated = finisherDistances.includes(dist)
@@ -238,16 +298,16 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       .replace(/[^a-z0-9]/g, '');
   };
 
-  // Đọc và phân tích File Excel theo đúng 19 cột tiêu chuẩn & VALIDATE DỮ LIỆU
+  // Đọc và phân tích File Excel theo đúng 18 cột tiêu chuẩn & VALIDATE DỮ LIỆU
   const processExcelFile = (file: File) => {
     setFileName(file.name);
     setHeaderValidationErrors([]);
     setParsedRows([]);
     setStatus('loading');
-    setStatusMessage(`Đang kiểm tra cấu trúc 19 cột tiêu chuẩn và validate dữ liệu từ tệp "${file.name}"...`);
+    setStatusMessage(`Đang kiểm tra cấu trúc 18 cột tiêu chuẩn và validate dữ liệu từ tệp "${file.name}"...`);
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
@@ -259,7 +319,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         if (rawJson.length < 2) {
           setStatus('error');
           setStatusMessage('File Excel rỗng hoặc không có dữ liệu hàng người tham gia.');
-          setStatusDetails('Tệp phải chứa 1 hàng tiêu đề đúng 19 cột và tối thiểu 1 hàng dữ liệu.');
+          setStatusDetails('Tệp phải chứa 1 hàng tiêu đề đúng 18 cột và tối thiểu 1 hàng dữ liệu.');
           return;
         }
 
@@ -293,23 +353,23 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         const actualColumnCount = lastNonEmptyIdx + 1;
 
         // =========================================================================
-        // BƯỚC 1: VALIDATE BẮT BUỘC ĐÚNG 19 CỘT THEO THỨ TỰ (TRƯỚC KHI VALIDATE DÒNG)
+        // BƯỚC 1: VALIDATE BẮT BUỘC ĐÚNG 18 CỘT THEO THỨ TỰ (TRƯỚC KHI VALIDATE DÒNG)
         // =========================================================================
         const columnErrors: string[] = [];
 
-        // 1.1 Kiểm tra số lượng cột (Phải chính xác 19 cột)
-        if (actualColumnCount < 19) {
+        // 1.1 Kiểm tra số lượng cột (Phải chính xác 18 cột)
+        if (actualColumnCount < 18) {
           columnErrors.push(
-            `File Excel bị THIẾU CỘT: Hiện có ${actualColumnCount}/19 cột tiêu chuẩn (thiếu ${19 - actualColumnCount} cột).`
+            `File Excel bị THIẾU CỘT: Hiện có ${actualColumnCount}/18 cột tiêu chuẩn (thiếu ${18 - actualColumnCount} cột).`
           );
-        } else if (actualColumnCount > 19) {
+        } else if (actualColumnCount > 18) {
           columnErrors.push(
-            `File Excel bị THỪA CỘT: Hiện có ${actualColumnCount} cột (thừa ${actualColumnCount - 19} cột nội dung khác không nằm trong 19 cột tiêu chuẩn).`
+            `File Excel bị THỪA CỘT: Hiện có ${actualColumnCount} cột (thừa ${actualColumnCount - 18} cột nội dung khác không nằm trong 18 cột tiêu chuẩn).`
           );
         }
 
-        // 1.2 Kiểm tra tên tiêu đề và vị trí từng cột từ 1 đến 19
-        for (let i = 0; i < 19; i++) {
+        // 1.2 Kiểm tra tên tiêu đề và vị trí từng cột từ 1 đến 18
+        for (let i = 0; i < 18; i++) {
           const expectedTitle = EXPECTED_COLUMNS[i];
           const actualHeader = cleanedHeaders[i] || '';
           const mapping = FIELD_MAPPINGS[i];
@@ -332,10 +392,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         if (columnErrors.length > 0) {
           setStatus('error');
           setStatusMessage(
-            `LỖI CẤU TRÚC CỘT FILE EXCEL: File không đúng 19 cột tiêu chuẩn hoặc sai thứ tự! (${columnErrors.length} lỗi tiêu đề)`
+            `LỖI CẤU TRÚC CỘT FILE EXCEL: File không đúng 18 cột tiêu chuẩn hoặc sai thứ tự! (${columnErrors.length} lỗi tiêu đề)`
           );
           setStatusDetails(
-            `Vui lòng điều chỉnh lại cấu trúc tiêu đề cột theo đúng 19 cột tiêu chuẩn từ 1 đến 19 trước khi tiếp tục.`
+            `Vui lòng điều chỉnh lại cấu trúc tiêu đề cột theo đúng 18 cột tiêu chuẩn từ 1 đến 18 trước khi tiếp tục.`
           );
           setHeaderValidationErrors(columnErrors);
           setParsedRows([]);
@@ -347,7 +407,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         // BƯỚC 2: VALIDATE DỮ LIỆU TỪNG DÒNG (CHỈ CHẠY KHI CỘT ĐÃ ĐẠT CHUẨN 100%)
         // =========================================================================
         setHeaderValidationErrors([]);
-        setMatchedColumnCount(19);
+        setMatchedColumnCount(18);
 
         const extractedRows: ExcelRowItem[] = [];
 
@@ -382,11 +442,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             loaiAo: getVal(11),
             coAo: getVal(12),
             coAoFinisher: getVal(13),
-            soTien: getVal(14),
-            thanhTich: getVal(15),
-            nguoiLienHeKhanCap: getVal(16),
-            sdtLienHeKhanCap: getVal(17),
-            ghiChu: getVal(18),
+            thanhTich: getVal(14),
+            nguoiLienHeKhanCap: getVal(15),
+            sdtLienHeKhanCap: getVal(16),
+            ghiChu: getVal(17),
           };
 
           if (pItem.hoTen || pItem.sdt || pItem.email || pItem.cuLy) {
@@ -409,6 +468,26 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           return;
         }
 
+        // Tự động tiền xử lý & chuẩn hóa cột THÀNH TÍCH bằng AI
+        if (autoAiNormalizeOnUpload) {
+          try {
+            setStatusMessage(`⚡ Đang gọi AI Gemini tiền xử lý và chuẩn hóa cột THÀNH TÍCH cho ${extractedRows.length} vận động viên...`);
+            const rawPerformances = extractedRows.map((r) => r.thanhTich || '');
+            const normalizedTimes = await normalizePerformancesWithAi(rawPerformances);
+
+            extractedRows.forEach((r, idx) => {
+              r.thanhTich = normalizedTimes[idx] || 'D';
+              const reVal = validateParticipant(r, { finisherDistances });
+              r.validationOutput = reVal;
+              if (reVal.data) {
+                Object.assign(r, reVal.data);
+              }
+            });
+          } catch (aiErr) {
+            console.warn('Auto AI normalize on upload notice:', aiErr);
+          }
+        }
+
         setParsedRows(extractedRows);
 
         const invalidCount = extractedRows.filter((r) => r.validationOutput?.status === 'ERROR').length;
@@ -419,8 +498,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           setStatusDetails(`Vui lòng kiểm tra báo cáo lỗi chi tiết ở bên dưới và chỉnh sửa trực tiếp trước khi ghi nhận dữ liệu.`);
         } else {
           setStatus('success');
-          setStatusMessage(`Cấu trúc 19 cột đạt chuẩn 100% & Kiểm tra ${extractedRows.length} dòng dữ liệu HỢP LỆ (100% SUCCESS)!`);
-          setStatusDetails(`Tệp: ${file.name} | Số lượng: ${extractedRows.length} vận động viên.`);
+          setStatusMessage(`Cấu trúc 18 cột đạt chuẩn 100% & Kiểm tra ${extractedRows.length} dòng dữ liệu HỢP LỆ (100% SUCCESS)!`);
+          setStatusDetails(`Tệp: ${file.name} | Số lượng: ${extractedRows.length} vận động viên.${autoAiNormalizeOnUpload ? ' Đã hoàn tất tiền xử lý Thành tích bằng AI.' : ''}`);
         }
       } catch (err: any) {
         setStatus('error');
@@ -450,7 +529,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     }
   };
 
-  // Tạo và Tải File Excel Mẫu với ĐÚNG 19 CỘT TIÊU CHUẨN
+  // Tạo và Tải File Excel Mẫu với ĐÚNG 18 CỘT TIÊU CHUẨN
   const handleDownloadSampleExcel = () => {
     const headerRow = EXPECTED_COLUMNS;
 
@@ -469,7 +548,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       runner.loaiAo,
       runner.coAo,
       runner.coAoFinisher,
-      runner.soTien,
       runner.thanhTich,
       runner.nguoiLienHeKhanCap,
       runner.sdtLienHeKhanCap,
@@ -612,7 +690,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         loaiAo: r.loaiAo,
         coAo: r.coAo,
         coAoFinisher: r.coAoFinisher,
-        soTien: r.soTien,
         thanhTich: r.thanhTich,
         nguoiLienHeKhanCap: r.nguoiLienHeKhanCap,
         sdtLienHeKhanCap: r.sdtLienHeKhanCap,
@@ -663,7 +740,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           loaiAo: row.loaiAo,
           coAo: row.coAo,
           coAoFinisher: row.coAoFinisher,
-          soTien: row.soTien,
           thanhTich: row.thanhTich,
           nguoiLienHeKhanCap: row.nguoiLienHeKhanCap,
           sdtLienHeKhanCap: row.sdtLienHeKhanCap,
@@ -697,10 +773,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             </span>
             <div>
               <h2 className="text-base font-serif font-bold text-[#F8F6F0]">
-                BƯỚC 2: IMPORT & VALIDATE FILE EXCEL (19 CỘT TIÊU CHUẨN)
+                BƯỚC 2: IMPORT & VALIDATE FILE EXCEL (18 CỘT TIÊU CHUẨN)
               </h2>
               <p className="text-[11px] font-mono text-[#E5E2D9]">
-                Kiểm tra 15 quy tắc Validation dữ liệu trước khi ghi nhận
+                Kiểm tra 29 quy tắc Validation dữ liệu trước khi ghi nhận
               </p>
             </div>
           </div>
@@ -726,15 +802,15 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       </div>
 
       <div className="p-6 space-y-5">
-        {/* List of Required 19 Fields Badge Grid */}
+        {/* List of Required 18 Fields Badge Grid */}
         <div className="p-4 bg-[#2D2D2D] text-[#F8F6F0] border border-[#2D2D2D] space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#F8F6F0] flex items-center gap-2">
               <Info className="w-4 h-4 text-[#E5E2D9]" />
-              19 CỘT TIÊU CHUẨN & 30 QUY TẮC VALIDATION DỮ LIỆU:
+              18 CỘT TIÊU CHUẨN & 29 QUY TẮC VALIDATION DỮ LIỆU:
             </span>
             <span className="text-[10px] font-mono font-bold bg-[#F8F6F0] text-[#2D2D2D] border border-[#2D2D2D] px-2.5 py-0.5">
-              19 / 19 CỘT
+              18 / 18 CỘT
             </span>
           </div>
 
@@ -808,45 +884,80 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             </div>
             <div>
               <p className="text-xs font-mono font-bold text-[#2D2D2D]">
-                Kéo thả File Excel (19 cột) vào đây hoặc <span className="underline">bấm để chọn file</span>
+                Kéo thả File Excel (18 cột) vào đây hoặc <span className="underline">bấm để chọn file</span>
               </p>
               <p className="text-[11px] font-mono text-stone-600 mt-1">
-                Tự động kiểm tra và báo cáo lỗi theo 30 quy tắc validation đầu vào
+                Tự động kiểm tra và báo cáo lỗi theo 29 quy tắc validation đầu vào
               </p>
             </div>
           </div>
         </div>
 
-        {/* Action Buttons: Download Sample Excel / Quick Test Sample */}
-        <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono pt-1">
-          <button
-            type="button"
-            onClick={handleDownloadSampleExcel}
-            className="px-3.5 py-2 bg-[#E5E2D9] hover:bg-[#2D2D2D] hover:text-[#F8F6F0] text-[#2D2D2D] font-bold border border-[#2D2D2D] transition-colors flex items-center gap-2 cursor-pointer text-[11px] uppercase tracking-wider"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>TẢI FILE EXCEL MẪU 19 CỘT (.XLSX)</span>
-          </button>
+        {/* Action Buttons: Download Sample Excel / Quick Test Sample / AI Normalize */}
+        <div className="space-y-2 pt-1 font-mono">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleDownloadSampleExcel}
+                className="px-3.5 py-2 bg-[#E5E2D9] hover:bg-[#2D2D2D] hover:text-[#F8F6F0] text-[#2D2D2D] font-bold border border-[#2D2D2D] transition-colors flex items-center gap-2 cursor-pointer text-[11px] uppercase tracking-wider"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>TẢI FILE EXCEL MẪU 18 CỘT (.XLSX)</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={handleLoadSampleData}
-            className="px-3.5 py-2 bg-[#F8F6F0] hover:bg-[#2D2D2D] hover:text-[#F8F6F0] text-[#2D2D2D] font-bold border border-[#2D2D2D] transition-colors flex items-center gap-2 cursor-pointer text-[11px] uppercase tracking-wider"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>THỬ DỮ LIỆU MẪU (ĐÃ VALIDATE)</span>
-          </button>
+              <button
+                type="button"
+                onClick={handleLoadSampleData}
+                className="px-3.5 py-2 bg-[#F8F6F0] hover:bg-[#2D2D2D] hover:text-[#F8F6F0] text-[#2D2D2D] font-bold border border-[#2D2D2D] transition-colors flex items-center gap-2 cursor-pointer text-[11px] uppercase tracking-wider"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>THỬ DỮ LIỆU MẪU (ĐÃ VALIDATE)</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleAiNormalizeBatch}
+              disabled={isAiNormalizing || parsedRows.length === 0}
+              className="px-3.5 py-2 bg-[#2D2D2D] hover:bg-stone-800 disabled:bg-stone-300 disabled:text-stone-500 text-[#F8F6F0] font-bold border border-[#2D2D2D] transition-colors flex items-center gap-2 cursor-pointer text-[11px] uppercase tracking-wider disabled:cursor-not-allowed shadow-xs"
+              title="Kích hoạt AI Gemini chuẩn hóa toàn bộ cột Thành tích về chuẩn hh:mm hoặc D"
+            >
+              {isAiNormalizing ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Bot className="w-3.5 h-3.5 text-amber-400" />
+              )}
+              <span>AI CHUẨN HÓA CỘT THÀNH TÍCH (hh:mm)</span>
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-[11px] text-stone-600">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={autoAiNormalizeOnUpload}
+                onChange={(e) => setAutoAiNormalizeOnUpload(e.target.checked)}
+                className="w-3.5 h-3.5 accent-[#2D2D2D] cursor-pointer"
+              />
+              <span>Tự động kích hoạt AI tiền xử lý & chuẩn hóa Thành tích khi tải file Excel</span>
+            </label>
+
+            <span className="text-[10px] text-stone-500 italic">
+              💡 Quy tắc: "10" / "10:00" → 00:10 | "1h30p" → 01:30 | Ô trống → D
+            </span>
+          </div>
         </div>
 
-        {/* LỖI CẤU TRÚC CỘT FILE EXCEL (CẤM NHẬP NẾU SAI 19 CỘT TIÊU CHUẨN) */}
+        {/* LỖI CẤU TRÚC CỘT FILE EXCEL (CẤM NHẬP NẾU SAI 18 CỘT TIÊU CHUẨN) */}
         {headerValidationErrors.length > 0 && (
           <div className="p-4 bg-rose-50 border-2 border-rose-600 font-mono space-y-3">
             <div className="flex items-center gap-2 font-bold text-rose-900 text-xs uppercase">
               <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
-              <span>LỖI VALIDATE CẤU TRÚC CỘT (FILE EXCEL KHÔNG ĐÚNG 19 CỘT THEO THỨ TỰ)</span>
+              <span>LỖI VALIDATE CẤU TRÚC CỘT (FILE EXCEL KHÔNG ĐÚNG 18 CỘT THEO THỨ TỰ)</span>
             </div>
             <p className="text-xs text-rose-800 font-sans">
-              Hệ thống bắt buộc file Excel phải chứa <strong>đúng 19 cột tiêu chuẩn theo đúng thứ tự</strong> (không được thiếu hay thừa các cột khác). Vui lòng điều chỉnh lại tiêu đề file theo báo cáo chi tiết dưới đây:
+              Hệ thống bắt buộc file Excel phải chứa <strong>đúng 18 cột tiêu chuẩn theo đúng thứ tự</strong> (không được thiếu hay thừa các cột khác). Vui lòng điều chỉnh lại tiêu đề file theo báo cáo chi tiết dưới đây:
             </p>
             <div className="bg-white p-3 border border-rose-300 space-y-1.5 max-h-60 overflow-y-auto">
               {headerValidationErrors.map((err, idx) => (
@@ -857,7 +968,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               ))}
             </div>
             <div className="pt-1 flex items-center justify-between text-[11px] text-rose-800 font-sans">
-              <span>💡 Bạn có thể bấm <strong>"TẢI FILE EXCEL MẪU 19 CỘT (.XLSX)"</strong> ở trên để tải form mẫu chuẩn.</span>
+              <span>💡 Bạn có thể bấm <strong>"TẢI FILE EXCEL MẪU 18 CỘT (.XLSX)"</strong> ở trên để tải form mẫu chuẩn.</span>
             </div>
           </div>
         )}
@@ -926,22 +1037,39 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                 </h3>
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setParsedRows([]);
-                  setFileName('');
-                }}
-                className="text-xs text-stone-600 hover:text-[#2D2D2D] flex items-center gap-1 cursor-pointer font-bold uppercase tracking-wider"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>XÓA BẢNG</span>
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleAiNormalizeBatch}
+                  disabled={isAiNormalizing || parsedRows.length === 0}
+                  className="text-xs text-stone-900 hover:text-black flex items-center gap-1.5 cursor-pointer font-bold uppercase tracking-wider bg-[#E5E2D9] hover:bg-[#d8d5cb] px-2.5 py-1 border border-[#2D2D2D] transition-colors disabled:opacity-50"
+                  title="Chạy AI Gemini chuẩn hóa lại cột Thành tích"
+                >
+                  {isAiNormalizing ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Bot className="w-3 h-3 text-amber-600" />
+                  )}
+                  <span>AI CHUẨN HÓA THÀNH TÍCH</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setParsedRows([]);
+                    setFileName('');
+                  }}
+                  className="text-xs text-stone-600 hover:text-[#2D2D2D] flex items-center gap-1 cursor-pointer font-bold uppercase tracking-wider"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>XÓA BẢNG</span>
+                </button>
+              </div>
             </div>
 
             {/* Table Container */}
             <div className="border border-[#2D2D2D] overflow-x-auto max-h-80 bg-[#F8F6F0]">
-              <table className="w-full text-[11px] text-left text-[#2D2D2D] whitespace-nowrap min-w-[1600px] font-mono border-collapse">
+              <table className="w-full text-[11px] text-left text-[#2D2D2D] whitespace-nowrap min-w-[1500px] font-mono border-collapse">
                 <thead className="bg-[#2D2D2D] text-[#F8F6F0] font-bold uppercase tracking-wider sticky top-0 z-10">
                   <tr className="border-b border-[#2D2D2D]">
                     <th className="px-3 py-2.5 w-10 text-center sticky left-0 bg-[#2D2D2D] z-20 border-r border-[#E0DDD5]/20">#</th>
@@ -960,7 +1088,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                     <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">LOẠI ÁO</th>
                     <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">CỠ ÁO</th>
                     <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">CỠ ÁO FINISHER</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">SỐ TIỀN</th>
                     <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">THÀNH TÍCH</th>
                     <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">NGƯỜI LH KHẨN CẤP</th>
                     <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">SĐT LH KHẨN CẤP</th>
@@ -1034,7 +1161,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                         </td>
                         <td className="px-3 py-2 font-bold border-r border-[#E0DDD5]">{row.coAo || <span className="text-rose-600 italic">Thiếu</span>}</td>
                         <td className="px-3 py-2 font-bold border-r border-[#E0DDD5]">{row.coAoFinisher || <span className="text-rose-600 italic">Thiếu</span>}</td>
-                        <td className="px-3 py-2 font-bold border-r border-[#E0DDD5]">{row.soTien || '-'}</td>
                         <td className="px-3 py-2 border-r border-[#E0DDD5]">{row.thanhTich || '-'}</td>
                         <td className="px-3 py-2 border-r border-[#E0DDD5]">{row.nguoiLienHeKhanCap || <span className="text-rose-600 italic">Thiếu</span>}</td>
                         <td className="px-3 py-2 border-r border-[#E0DDD5]">{row.sdtLienHeKhanCap || <span className="text-rose-600 italic">Thiếu</span>}</td>
@@ -1108,7 +1234,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           <div className="p-5 bg-[#F8F6F0] border border-[#2D2D2D] space-y-3 font-mono">
             <div className="flex items-center gap-2 text-[#2D2D2D] font-bold text-xs uppercase font-serif">
               <CheckCircle2 className="w-4 h-4 text-[#2D2D2D] flex-shrink-0" />
-              <span>GHI 19 CỘT DỮ LIỆU VÀO GOOGLE SHEET THÀNH CÔNG!</span>
+              <span>GHI 18 CỘT DỮ LIỆU VÀO GOOGLE SHEET THÀNH CÔNG!</span>
             </div>
             <div className="text-xs text-[#2D2D2D] bg-[#E5E2D9] p-4 border border-[#2D2D2D] space-y-1.5">
               <div>
@@ -1148,7 +1274,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           </div>
         )}
 
-        {/* Danh sách 30 Quy tắc Validation ở cuối Bước 2 */}
+        {/* Danh sách 29 Quy tắc Validation ở cuối Bước 2 */}
         <div className="pt-3 border-t border-stone-300/60 font-mono">
           <button
             type="button"
@@ -1157,7 +1283,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           >
             <div className="flex items-center gap-2">
               <Info className="w-4 h-4 text-stone-700" />
-              <span>DANH SÁCH 30 QUY TẮC VALIDATION & CHUẨN HÓA DỮ LIỆU (19 CỘT)</span>
+              <span>DANH SÁCH 29 QUY TẮC VALIDATION & CHUẨN HÓA DỮ LIỆU (18 CỘT)</span>
             </div>
             <div className="flex items-center gap-1 text-[11px] text-stone-600">
               <span>{showValidationRulesList ? 'Thu gọn' : 'Xem chi tiết'}</span>
@@ -1168,7 +1294,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           {showValidationRulesList && (
             <div className="p-4 bg-stone-100/80 border border-stone-300 text-stone-600 text-[11px] leading-relaxed space-y-3.5 mt-2 font-sans">
               <p className="text-stone-500 italic font-mono text-[10.5px]">
-                * Hệ thống tự động kiểm tra và chuẩn hóa dữ liệu đầu vào khi bạn tải file Excel lên. Dưới đây là chi tiết 30 quy tắc validation được áp dụng cho 19 cột tiêu chuẩn:
+                * Hệ thống tự động kiểm tra và chuẩn hóa dữ liệu đầu vào khi bạn tải file Excel lên. Dưới đây là chi tiết 29 quy tắc validation được áp dụng cho 18 cột tiêu chuẩn:
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -1235,18 +1361,17 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                 {/* Nhóm 5 */}
                 <div className="p-3 bg-white/80 border border-stone-200/80 space-y-1.5 col-span-1 md:col-span-2">
                   <h5 className="font-bold text-[#2D2D2D] uppercase text-[11px] border-b border-stone-200 pb-1 font-mono">
-                    🚨 5. SỐ TIỀN, THÀNH TÍCH & NGƯỜI LIÊN HỆ KHẨN CẤP
+                    🚨 5. THÀNH TÍCH & NGƯỜI LIÊN HỆ KHẨN CẤP
                   </h5>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <ul className="list-disc pl-4 space-y-1 text-stone-600">
-                      <li><strong>25. SỐ TIỀN:</strong> Tự do / Số nguyên dương.</li>
-                      <li><strong>26. THÀNH TÍCH (PR/PB):</strong> Tự quy chuẩn về dạng hh:mm (24h) từ 12:45 AM, 1h45m, v.v.</li>
-                      <li><strong>27. NGƯỜI LH KHẨN CẤP:</strong> Bắt buộc nhập.</li>
+                      <li><strong>25. THÀNH TÍCH (PR/PB):</strong> Tự động chuẩn hóa bằng AI Gemini về <code>hh:mm</code> hoặc chữ <code>D</code> nếu trống (Ví dụ: "10" / "10 phút" / "10:00" → 00:10 | "1h30p" → 01:30 | Bỏ trống / null → D).</li>
+                      <li><strong>26. NGƯỜI LH KHẨN CẤP:</strong> Bắt buộc nhập.</li>
+                      <li><strong>27. KHÔNG TRÙNG TÊN:</strong> Tên Người khẩn cấp không trùng với Tên VĐV.</li>
                     </ul>
                     <ul className="list-disc pl-4 space-y-1 text-stone-600">
-                      <li><strong>28. KHÔNG TRÙNG TÊN:</strong> Tên Người khẩn cấp không trùng với Tên VĐV.</li>
-                      <li><strong>29. SĐT LH KHẨN CẤP:</strong> Bắt buộc nhập (10-11 số).</li>
-                      <li><strong>30. KHÔNG TRÙNG SĐT:</strong> SĐT Khẩn cấp không trùng với SĐT cá nhân của VĐV.</li>
+                      <li><strong>28. SĐT LH KHẨN CẤP:</strong> Bắt buộc nhập (10-11 số).</li>
+                      <li><strong>29. KHÔNG TRÙNG SĐT:</strong> SĐT Khẩn cấp không trùng với SĐT cá nhân của VĐV.</li>
                     </ul>
                   </div>
                 </div>
@@ -1312,7 +1437,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             <div className="bg-[#2D2D2D] text-[#F8F6F0] p-4 flex items-center justify-between border-b border-[#2D2D2D]">
               <div className="flex items-center gap-2 font-serif font-bold text-sm">
                 <Edit3 className="w-4 h-4 text-[#F8F6F0]" />
-                <span>CHỈNH SỬA THÔNG TIN VẬN ĐỘNG VIÊN (19 CỘT)</span>
+                <span>CHỈNH SỬA THÔNG TIN VẬN ĐỘNG VIÊN (18 CỘT)</span>
               </div>
               <button
                 onClick={() => {
@@ -1518,33 +1643,40 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   </select>
                 </div>
 
-                {/* 15. SỐ TIỀN */}
+                {/* 15. THÀNH TÍCH */}
                 <div>
-                  <label className="font-bold block mb-1">15. SỐ TIỀN</label>
-                  <input
-                    type="text"
-                    value={editFormData.soTien}
-                    onChange={(e) => setEditFormData({ ...editFormData, soTien: e.target.value })}
-                    className="w-full p-2 bg-white border border-[#2D2D2D]"
-                    placeholder="500000"
-                  />
-                </div>
-
-                {/* 16. THÀNH TÍCH */}
-                <div>
-                  <label className="font-bold block mb-1">16. THÀNH TÍCH (hh:mm)</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold">15. THÀNH TÍCH (hh:mm / D)</label>
+                    <button
+                      type="button"
+                      onClick={handleAiNormalizeSingle}
+                      disabled={isAiNormalizingSingle}
+                      className="text-[10px] bg-[#2D2D2D] hover:bg-stone-800 text-[#F8F6F0] px-2 py-0.5 border border-[#2D2D2D] flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-50"
+                      title="Dùng AI Gemini chuyển đổi về định dạng hh:mm hoặc D"
+                    >
+                      {isAiNormalizingSingle ? (
+                        <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                      ) : (
+                        <Bot className="w-2.5 h-2.5 text-amber-400" />
+                      )}
+                      <span>AI CHUẨN HÓA</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={editFormData.thanhTich}
                     onChange={(e) => setEditFormData({ ...editFormData, thanhTich: e.target.value })}
                     className="w-full p-2 bg-white border border-[#2D2D2D]"
-                    placeholder="01:45"
+                    placeholder="Ví dụ: 00:10, 01:30 hoặc D"
                   />
+                  <p className="text-[10px] text-stone-500 mt-0.5">
+                    * Bỏ trống tự gán là "D" | "10" / "10 phút" / "10:00" → "00:10" | "1h30p" → "01:30"
+                  </p>
                 </div>
 
-                {/* 17. NGƯỜI LIÊN HỆ KHẨN CẤP */}
+                {/* 16. NGƯỜI LIÊN HỆ KHẨN CẤP */}
                 <div>
-                  <label className="font-bold block mb-1">17. NGƯỜI LH KHẨN CẤP *</label>
+                  <label className="font-bold block mb-1">16. NGƯỜI LH KHẨN CẤP *</label>
                   <input
                     type="text"
                     value={editFormData.nguoiLienHeKhanCap}
@@ -1555,9 +1687,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   />
                 </div>
 
-                {/* 18. SĐT LIÊN HỆ KHẨN CẤP */}
+                {/* 17. SĐT LIÊN HỆ KHẨN CẤP */}
                 <div>
-                  <label className="font-bold block mb-1">18. SĐT LH KHẨN CẤP *</label>
+                  <label className="font-bold block mb-1">17. SĐT LH KHẨN CẤP *</label>
                   <input
                     type="text"
                     value={editFormData.sdtLienHeKhanCap}
@@ -1567,18 +1699,18 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                     required
                   />
                 </div>
-              </div>
 
-              {/* 19. GHI CHÚ */}
-              <div>
-                <label className="font-bold block mb-1">19. GHI CHÚ</label>
-                <input
-                  type="text"
-                  value={editFormData.ghiChu}
-                  onChange={(e) => setEditFormData({ ...editFormData, ghiChu: e.target.value })}
-                  className="w-full p-2 bg-white border border-[#2D2D2D]"
-                  placeholder="Ghi chú thêm"
-                />
+                {/* 18. GHI CHÚ */}
+                <div>
+                  <label className="font-bold block mb-1">18. GHI CHÚ</label>
+                  <input
+                    type="text"
+                    value={editFormData.ghiChu}
+                    onChange={(e) => setEditFormData({ ...editFormData, ghiChu: e.target.value })}
+                    className="w-full p-2 bg-white border border-[#2D2D2D]"
+                    placeholder="Ghi chú thêm"
+                  />
+                </div>
               </div>
 
               <div className="p-3 bg-[#E5E2D9] border-t border-[#2D2D2D] flex items-center justify-end gap-3 pt-4">

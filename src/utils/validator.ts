@@ -150,16 +150,15 @@ function parseAndFormatDob(rawInput: any): { day: number; month: number; year: n
 }
 
 /**
- * Tự động quy chuẩn các định dạng thời gian từ Excel / JS Date sang dạng hh:mm (24h)
- * - "12:45:00 AM" -> "00:45"
- * - "12:45 AM" -> "00:45"
- * - "01:45:00" -> "01:45"
- * - "00:45" / "1:45" -> "00:45" / "01:45"
- * - Excel fraction (0.03125 -> "00:45")
- * - "1h45m" / "1h45" -> "01:45"
+ * Tự động quy chuẩn các định dạng thời gian từ Excel / Text sang dạng hh:mm (24h) hoặc 'D'
+ * - Nếu ô trống, thiếu dữ liệu, null, hoặc không có thông tin thời gian -> Trả về chữ: D
+ * - Mặc định số biểu thị phút: "10phút", "10 phút", "10'", "10 p", "10p", "10" -> "00:10"
+ * - Dạng "10:00" trong thể thao -> "00:10" (10 phút 00 giây)
+ * - Có chỉ rõ giờ: "1h30p", "1 giờ 15 phút", "01:30:00" -> "01:30", "01:15", "01:30"
+ * - Dạng hh:mm (01:45) -> "01:45"
  */
 export function parseAndFormatTime(rawInput: any): string {
-  if (rawInput === null || rawInput === undefined) return '';
+  if (rawInput === null || rawInput === undefined) return 'D';
 
   if (rawInput instanceof Date && !isNaN(rawInput.getTime())) {
     const h = rawInput.getHours();
@@ -168,7 +167,9 @@ export function parseAndFormatTime(rawInput: any): string {
   }
 
   const rawStr = String(rawInput).trim();
-  if (!rawStr) return '';
+  if (!rawStr || rawStr === '' || rawStr.toUpperCase() === 'D' || rawStr === '-' || rawStr === 'null' || rawStr === 'undefined') {
+    return 'D';
+  }
 
   // 1. Chuỗi có AM / PM (ví dụ: "12:45:00 AM", "12:45 AM", "1:15:30 PM")
   const ampmMatch = rawStr.match(/^(\d{1,2}):(\d{1,2})(?::\d{1,2})?\s*(AM|PM)$/i);
@@ -186,8 +187,27 @@ export function parseAndFormatTime(rawInput: any): string {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   }
 
-  // 2. Chuỗi dạng hh:mm:ss hoặc hh:mm (ví dụ "00:45:00", "01:45:20", "00:45", "1:45")
-  const timeMatch = rawStr.match(/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+  // 2. Chuỗi dạng hh:mm:ss (ví dụ "01:30:00", "00:10:00", "02:15:30")
+  const hmsMatch = rawStr.match(/^(\d{1,2}):(\d{1,2}):(\d{1,2})$/);
+  if (hmsMatch) {
+    const hours = parseInt(hmsMatch[1], 10);
+    const minutes = parseInt(hmsMatch[2], 10);
+    if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+  }
+
+  // 3. Chuỗi dạng "10:00" trong bối cảnh thể thao ngắn/trung bình -> 10 phút 00 giây = 00:10
+  const mmSsMatch = rawStr.match(/^(\d{1,2}):00$/);
+  if (mmSsMatch) {
+    const mins = parseInt(mmSsMatch[1], 10);
+    if (mins >= 0 && mins < 60) {
+      return `00:${String(mins).padStart(2, '0')}`;
+    }
+  }
+
+  // Chuỗi dạng "01:30" hoặc "1:45"
+  const timeMatch = rawStr.match(/^(\d{1,2}):(\d{1,2})$/);
   if (timeMatch) {
     const hours = parseInt(timeMatch[1], 10);
     const minutes = parseInt(timeMatch[2], 10);
@@ -196,7 +216,28 @@ export function parseAndFormatTime(rawInput: any): string {
     }
   }
 
-  // 3. Số fraction Excel (ví dụ: 0.03125 = 45 phút, 0.072916666 = 1h45m)
+  // 4. Chuỗi chỉ rõ giờ và phút: "1h30p", "1 giờ 15 phút", "1h 30m"
+  const hourMinMatch = rawStr.match(/(?:(\d+)\s*(?:h|giờ|tiếng|g))?\s*(?:(\d+)\s*(?:p|phút|m|'))?/i);
+  if (hourMinMatch && (hourMinMatch[1] || hourMinMatch[2])) {
+    const hours = hourMinMatch[1] ? parseInt(hourMinMatch[1], 10) : 0;
+    const minutes = hourMinMatch[2] ? parseInt(hourMinMatch[2], 10) : 0;
+    if (hours < 24 && minutes < 60) {
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+  }
+
+  // 5. Chuỗi số biểu thị phút: "10phút", "10 phút", "10'", "10 p", "10p", "10"
+  const minOnlyMatch = rawStr.match(/^(\d+)(?:\s*(?:phút|p|'|m))?$/i);
+  if (minOnlyMatch) {
+    const totalMinutes = parseInt(minOnlyMatch[1], 10);
+    if (!isNaN(totalMinutes)) {
+      const hours = Math.floor(totalMinutes / 60) % 24;
+      const mins = totalMinutes % 60;
+      return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+    }
+  }
+
+  // 6. Số fraction Excel (ví dụ: 0.03125 = 45 phút, 0.072916666 = 1h45m)
   const numVal = Number(rawStr);
   if (!isNaN(numVal) && numVal > 0 && numVal < 1) {
     const totalMinutes = Math.round(numVal * 24 * 60);
@@ -205,17 +246,7 @@ export function parseAndFormatTime(rawInput: any): string {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   }
 
-  // 4. Chuỗi dạng 1h45m, 1h45, 45m
-  const hmMatch = rawStr.match(/^(?:(\d+)\s*h)?\s*(?:(\d+)\s*m?)?$/i);
-  if (hmMatch && (hmMatch[1] || hmMatch[2])) {
-    const hours = hmMatch[1] ? parseInt(hmMatch[1], 10) : 0;
-    const minutes = hmMatch[2] ? parseInt(hmMatch[2], 10) : 0;
-    if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-    }
-  }
-
-  return rawStr;
+  return 'D';
 }
 
 export interface ValidationOptions {
@@ -460,32 +491,15 @@ export function validateParticipant(
   }
   normalized.coAoFinisher = rawCoAoFinisher;
 
-  // 12. SỐ TIỀN (Bỏ trống hoặc dạng số)
-  const rawSoTien = (rawRecord.soTien || '').trim();
-  if (rawSoTien) {
-    const numericStr = rawSoTien.replace(/[^0-9]/g, '');
-    if (!numericStr) {
-      errors.push({
-        field: 'SỐ TIỀN',
-        message: 'Số tiền phải là dạng số (ví dụ: 500000).',
-      });
-    }
-  }
-  normalized.soTien = rawSoTien;
-
-  // 13. THÀNH TÍCH (PR/PB) (Bỏ trống hoặc dạng hh:mm)
+  // 15. THÀNH TÍCH (PR/PB) (Quy chuẩn về hh:mm hoặc 'D')
   const rawThanhTich = (rawRecord.thanhTich || '').trim();
-  let formattedThanhTich = rawThanhTich;
-  if (rawThanhTich) {
-    formattedThanhTich = parseAndFormatTime(rawThanhTich);
-    // Kiểm tra sau khi định dạng xem có đúng chuẩn hh:mm không
-    const isTimeFormat = /^(\d{1,2}:)\d{2}$/.test(formattedThanhTich);
-    if (!isTimeFormat) {
-      errors.push({
-        field: 'THÀNH TÍCH (PR/PB)',
-        message: 'Thành tích phải đúng định dạng thời gian (ví dụ: 00:45, 01:45).',
-      });
-    }
+  const formattedThanhTich = parseAndFormatTime(rawThanhTich);
+  const isTimeFormat = /^(\d{2}:\d{2}|D)$/i.test(formattedThanhTich);
+  if (!isTimeFormat) {
+    errors.push({
+      field: 'THÀNH TÍCH (PR/PB)',
+      message: 'Thành tích phải đúng định dạng thời gian hh:mm (ví dụ: 00:10, 01:30) hoặc chữ "D".',
+    });
   }
   normalized.thanhTich = formattedThanhTich;
 

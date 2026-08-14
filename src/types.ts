@@ -33,7 +33,6 @@ export interface ParticipantRecord {
   coAo: string;
   loaiAo: string;
   coAoFinisher: string;
-  soTien: string;
   thanhTich: string;
   nguoiLienHeKhanCap: string;
   sdtLienHeKhanCap: string;
