@@ -314,11 +314,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     reader.onload = async (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: 'array', cellText: true, cellDates: true });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
 
-        const rawJson: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        // Đọc dữ liệu với raw: false để ưu tiên lấy chuỗi text hiển thị trong ô Excel (bảo lưu số 0 đầu)
+        const rawJson: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: '' });
 
         if (rawJson.length < 2) {
           setStatus('error');
@@ -679,26 +680,31 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     setStatusDetails('');
 
     try {
-      const payloadParticipants: ParticipantRecord[] = parsedRows.map((r, idx) => ({
-        stt: r.stt || String(idx + 1),
-        hoTen: r.hoTen,
-        email: r.email,
-        tenTrenBib: r.tenTrenBib,
-        cuLy: r.cuLy,
-        gioiTinh: r.gioiTinh,
-        namSinh: r.namSinh,
-        sdt: r.sdt,
-        cccd: r.cccd,
-        quocTich: r.quocTich,
-        tinhThanh: r.tinhThanh,
-        loaiAo: r.loaiAo,
-        coAo: r.coAo,
-        coAoFinisher: r.coAoFinisher,
-        thanhTich: r.thanhTich,
-        nguoiLienHeKhanCap: r.nguoiLienHeKhanCap,
-        sdtLienHeKhanCap: r.sdtLienHeKhanCap,
-        ghiChu: r.ghiChu,
-      }));
+      const payloadParticipants: ParticipantRecord[] = parsedRows.map((r, idx) => {
+        // Cột CỰ LY: loại bỏ "km", "Km", "KM" chỉ để lại số khi đẩy vào Google Sheet (VD: 21km -> 21, 42km -> 42, 5km -> 5, 10km -> 10)
+        const cleanCuLy = (r.cuLy || '').replace(/[kK][mM]/g, '').trim();
+
+        return {
+          stt: r.stt || String(idx + 1),
+          hoTen: r.hoTen,
+          email: r.email,
+          tenTrenBib: r.tenTrenBib,
+          cuLy: cleanCuLy,
+          gioiTinh: r.gioiTinh,
+          namSinh: r.namSinh,
+          sdt: r.sdt,
+          cccd: r.cccd,
+          quocTich: r.quocTich,
+          tinhThanh: r.tinhThanh,
+          loaiAo: r.loaiAo,
+          coAo: r.coAo,
+          coAoFinisher: r.coAoFinisher,
+          thanhTich: r.thanhTich,
+          nguoiLienHeKhanCap: r.nguoiLienHeKhanCap,
+          sdtLienHeKhanCap: r.sdtLienHeKhanCap,
+          ghiChu: r.ghiChu,
+        };
+      });
 
       const result = await onSubmitBatch({
         participants: payloadParticipants,

@@ -140,6 +140,9 @@ function handleCreateEvent(data) {
   
   sheet.appendRow(headers);
 
+  // Định dạng toàn bộ bảng dữ liệu sang Plain Text (@) để không bao giờ bị mất số 0 ở đầu (SĐT, CCCD, STT...)
+  sheet.getRange(1, 1, sheet.getMaxRows(), headers.length).setNumberFormat("@");
+
   // Định dạng hàng tiêu đề
   var headerRange = sheet.getRange(1, 1, 1, headers.length);
   headerRange.setBackground("#0f172a");
@@ -211,6 +214,19 @@ function handleSubmitForm(data) {
       };
     }
 
+    // Hàm chuyển đổi sang chuỗi Text thuần túy, loại bỏ các trường hợp ép kiểu số làm mất số 0 đầu
+    var toText = function(val) {
+      if (val === null || val === undefined) return "";
+      return String(val).trim();
+    };
+
+    // Hàm chuẩn hóa Cự ly: loại bỏ chữ km / Km / KM, chỉ giữ lại số
+    var formatCuLy = function(val) {
+      if (val === null || val === undefined) return "";
+      var s = String(val).trim();
+      return s.replace(/[kK][mM]/g, "").trim();
+    };
+
     // Mảng 2 chiều để append vào Sheet trong 1 thao tác duy nhất
     var rowsToAdd = [];
     for (var i = 0; i < participantsList.length; i++) {
@@ -218,30 +234,33 @@ function handleSubmitForm(data) {
 
       rowsToAdd.push([
         timestamp,
-        p.stt || p["STT"] || p["Số TT"] || p["so tt"] || (i + 1),
-        p.hoTen || p["HỌ TÊN"] || p["Họ tên"] || "",
-        p.email || p["EMAIL"] || p["Email"] || "",
-        p.tenTrenBib || p["TÊN TRÊN BIB"] || p["Tên trên BIB"] || "",
-        p.cuLy || p["CỰ LY"] || p["Cự ly"] || "",
-        p.gioiTinh || p["GIỚI TÍNH"] || p["Giới tính"] || "",
-        p.namSinh || p["NĂM SINH"] || p["Năm sinh"] || "",
-        p.sdt || p["SĐT"] || p["Sđt"] || p["Số điện thoại"] || "",
-        p.cccd || p["CCCD"] || p["CMND/CCCD"] || "",
-        p.quocTich || p["QUỐC TỊCH"] || p["Quốc tịch"] || "",
-        p.tinhThanh || p["TỈNH THÀNH"] || p["Tỉnh thành"] || "",
-        p.loaiAo || p["LOẠI ÁO"] || p["Loại áo"] || p["Loai ao"] || "",
-        p.coAo || p["CỠ ÁO"] || p["Cỡ áo"] || "",
-        p.coAoFinisher || p["CỠ ÁO FINISHER"] || p["Cỡ áo Finisher"] || "",
-        p.thanhTich || p["THÀNH TÍCH"] || p["Thành tích"] || "",
-        p.nguoiLienHeKhanCap || p["NGƯỜI LIÊN HỆ KHẨN CẤP"] || p["Người liên hệ khẩn cấp"] || "",
-        p.sdtLienHeKhanCap || p["SĐT LIÊN HỆ KHẨN CẤP"] || p["SĐT liên hệ khẩn cấp"] || "",
-        p.ghiChu || p["GHI CHÚ"] || p["Ghi chú"] || ""
+        toText(p.stt || p["STT"] || p["Số TT"] || p["so tt"] || (i + 1)),
+        toText(p.hoTen || p["HỌ TÊN"] || p["Họ tên"]),
+        toText(p.email || p["EMAIL"] || p["Email"]),
+        toText(p.tenTrenBib || p["TÊN TRÊN BIB"] || p["Tên trên BIB"]),
+        formatCuLy(p.cuLy || p["CỰ LY"] || p["Cự ly"]),
+        toText(p.gioiTinh || p["GIỚI TÍNH"] || p["Giới tính"]),
+        toText(p.namSinh || p["NĂM SINH"] || p["Năm sinh"]),
+        toText(p.sdt || p["SĐT"] || p["Sđt"] || p["Số điện thoại"]),
+        toText(p.cccd || p["CCCD"] || p["CMND/CCCD"]),
+        toText(p.quocTich || p["QUỐC TỊCH"] || p["Quốc tịch"]),
+        toText(p.tinhThanh || p["TỈNH THÀNH"] || p["Tỉnh thành"]),
+        toText(p.loaiAo || p["LOẠI ÁO"] || p["Loại áo"] || p["Loai ao"]),
+        toText(p.coAo || p["CỠ ÁO"] || p["Cỡ áo"]),
+        toText(p.coAoFinisher || p["CỠ ÁO FINISHER"] || p["Cỡ áo Finisher"]),
+        toText(p.thanhTich || p["THÀNH TÍCH"] || p["Thành tích"]),
+        toText(p.nguoiLienHeKhanCap || p["NGƯỜI LIÊN HỆ KHẨN CẤP"] || p["Người liên hệ khẩn cấp"]),
+        toText(p.sdtLienHeKhanCap || p["SĐT LIÊN HỆ KHẨN CẤP"] || p["SĐT liên hệ khẩn cấp"]),
+        toText(p.ghiChu || p["GHI CHÚ"] || p["Ghi chú"])
       ]);
     }
 
-    // Ghi hàng loạt vào Sheet
+    // Ghi hàng loạt vào Sheet với định dạng Plain Text (@) bắt buộc
     var lastRow = sheet.getLastRow();
     var range = sheet.getRange(lastRow + 1, 1, rowsToAdd.length, 19);
+    
+    // Thiết lập NumberFormat = '@' cho vùng dữ liệu trước khi gán giá trị để Google Sheet không bao giờ tự động chuyển thành Number làm mất số 0 ở đầu của SĐT và CCCD
+    range.setNumberFormat("@");
     range.setValues(rowsToAdd);
 
     return {
