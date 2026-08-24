@@ -1073,51 +1073,59 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             </div>
 
             {/* Table Container */}
-            <div className="border border-[#2D2D2D] overflow-x-auto max-h-80 bg-[#F8F6F0]">
+            <div className="border border-[#2D2D2D] overflow-x-auto max-h-96 bg-[#F8F6F0] relative">
               <table className="w-full text-[11px] text-left text-[#2D2D2D] whitespace-nowrap min-w-[1500px] font-mono border-collapse">
-                <thead className="bg-[#2D2D2D] text-[#F8F6F0] font-bold uppercase tracking-wider sticky top-0 z-10">
-                  <tr className="border-b border-[#2D2D2D]">
-                    <th className="px-3 py-2.5 w-10 text-center sticky left-0 bg-[#2D2D2D] z-20 border-r border-[#E0DDD5]/20">#</th>
-                    <th className="px-3 py-2.5 sticky left-10 bg-[#2D2D2D] z-20 border-r border-[#E0DDD5]/20">TRẠNG THÁI VALIDATION</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">STT</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">HỌ TÊN</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">EMAIL</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">TÊN TRÊN BIB</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">CỰ LY</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">GIỚI TÍNH</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">NĂM SINH (DOB)</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">SĐT</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">CCCD/PASSPORT</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">QUỐC TỊCH</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">TỈNH THÀNH</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">LOẠI ÁO</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">CỠ ÁO</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">CỠ ÁO FINISHER</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">THÀNH TÍCH</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">NGƯỜI LH KHẨN CẤP</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">SĐT LH KHẨN CẤP</th>
-                    <th className="px-3 py-2.5 border-r border-[#E0DDD5]/20">GHI CHÚ</th>
-                    <th className="px-3 py-2.5 text-center sticky right-0 bg-[#2D2D2D] z-20">THAO TÁC</th>
+                <thead className="bg-[#2D2D2D] text-[#F8F6F0] font-bold uppercase tracking-wider sticky top-0 z-20 shadow-xs">
+                  <tr className="border-b border-[#2D2D2D] bg-[#2D2D2D]">
+                    <th className="px-3 py-2.5 w-12 min-w-[48px] max-w-[48px] text-center sticky left-0 top-0 bg-[#2D2D2D] z-30 border-r border-[#E0DDD5]/20">#</th>
+                    <th className="px-3 py-2.5 sticky left-12 top-0 bg-[#2D2D2D] z-30 border-r border-[#E0DDD5]/20">TRẠNG THÁI VALIDATION</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">STT</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">HỌ TÊN</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">EMAIL</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">TÊN TRÊN BIB</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">CỰ LY</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">GIỚI TÍNH</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">NĂM SINH (DOB)</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">SĐT</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">CCCD/PASSPORT</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">QUỐC TỊCH</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">TỈNH THÀNH</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">LOẠI ÁO</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">CỠ ÁO</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">CỠ ÁO FINISHER</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">THÀNH TÍCH</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">NGƯỜI LH KHẨN CẤP</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">SĐT LH KHẨN CẤP</th>
+                    <th className="px-3 py-2.5 bg-[#2D2D2D] border-r border-[#E0DDD5]/20">GHI CHÚ</th>
+                    <th className="px-3 py-2.5 text-center sticky right-0 top-0 bg-[#2D2D2D] z-30 border-l border-[#E0DDD5]/20">THAO TÁC</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E0DDD5]">
                   {parsedRows.map((row, idx) => {
                     const isError = row.validationOutput?.status === 'ERROR';
                     const errors = row.validationOutput?.errors || [];
+                    const rowBgClass = isError
+                      ? 'bg-rose-50 hover:bg-rose-100'
+                      : idx % 2 === 0
+                      ? 'bg-[#F8F6F0] hover:bg-[#EAE7DF]'
+                      : 'bg-[#F1EFEA] hover:bg-[#EAE7DF]';
+                    const stickyCellBg = isError
+                      ? 'bg-rose-50'
+                      : idx % 2 === 0
+                      ? 'bg-[#F8F6F0]'
+                      : 'bg-[#F1EFEA]';
 
                     return (
                       <tr
                         key={row.id}
-                        className={`transition-colors ${
-                          isError ? 'bg-rose-100/70 hover:bg-rose-200/80' : 'hover:bg-[#E5E2D9]'
-                        }`}
+                        className={`transition-colors ${rowBgClass}`}
                       >
-                        <td className="px-3 py-2 text-center text-stone-600 sticky left-0 bg-inherit border-r border-[#E0DDD5]">
+                        <td className={`px-3 py-2 text-center text-stone-600 sticky left-0 z-10 border-r border-[#E0DDD5] ${stickyCellBg}`}>
                           {idx + 1}
                         </td>
 
                         {/* TRẠNG THÁI VALIDATION */}
-                        <td className="px-3 py-2 sticky left-10 bg-inherit z-10 border-r border-[#E0DDD5]">
+                        <td className={`px-3 py-2 sticky left-12 z-10 border-r border-[#E0DDD5] ${stickyCellBg}`}>
                           {isError ? (
                             <div className="flex flex-col gap-0.5">
                               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-800 bg-rose-200 px-2 py-0.5 border border-rose-400">
@@ -1172,7 +1180,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                         <td className="px-3 py-2 text-stone-600 italic border-r border-[#E0DDD5]">{row.ghiChu || '-'}</td>
 
                         {/* THAO TÁC */}
-                        <td className="px-3 py-2 text-center sticky right-0 bg-inherit">
+                        <td className={`px-3 py-2 text-center sticky right-0 z-10 border-l border-[#E0DDD5] ${stickyCellBg}`}>
                           <div className="flex items-center justify-center gap-1.5">
                             <button
                               type="button"
