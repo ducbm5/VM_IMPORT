@@ -220,6 +220,16 @@ function handleSubmitForm(data) {
       return String(val).trim();
     };
 
+    // Hàm bổ sung thêm ký tự ' ở đầu nếu dữ liệu bắt đầu bằng số 0 để Google Sheet giữ nguyên dạng Text và số 0
+    var formatLeadingZero = function(val) {
+      if (val === null || val === undefined) return "";
+      var str = String(val).trim();
+      if (str.indexOf("0") === 0 && str.indexOf("'") !== 0) {
+        return "'" + str;
+      }
+      return str;
+    };
+
     // Hàm chuẩn hóa Cự ly: loại bỏ chữ km / Km / KM, chỉ giữ lại số
     var formatCuLy = function(val) {
       if (val === null || val === undefined) return "";
@@ -241,8 +251,8 @@ function handleSubmitForm(data) {
         formatCuLy(p.cuLy || p["CỰ LY"] || p["Cự ly"]),
         toText(p.gioiTinh || p["GIỚI TÍNH"] || p["Giới tính"]),
         toText(p.namSinh || p["NĂM SINH"] || p["Năm sinh"]),
-        toText(p.sdt || p["SĐT"] || p["Sđt"] || p["Số điện thoại"]),
-        toText(p.cccd || p["CCCD"] || p["CMND/CCCD"]),
+        formatLeadingZero(p.sdt || p["SĐT"] || p["Sđt"] || p["Số điện thoại"]),
+        formatLeadingZero(p.cccd || p["CCCD"] || p["CMND/CCCD"]),
         toText(p.quocTich || p["QUỐC TỊCH"] || p["Quốc tịch"]),
         toText(p.tinhThanh || p["TỈNH THÀNH"] || p["Tỉnh thành"]),
         toText(p.loaiAo || p["LOẠI ÁO"] || p["Loại áo"] || p["Loai ao"]),
@@ -250,7 +260,7 @@ function handleSubmitForm(data) {
         toText(p.coAoFinisher || p["CỠ ÁO FINISHER"] || p["Cỡ áo Finisher"]),
         toText(p.thanhTich || p["THÀNH TÍCH"] || p["Thành tích"]),
         toText(p.nguoiLienHeKhanCap || p["NGƯỜI LIÊN HỆ KHẨN CẤP"] || p["Người liên hệ khẩn cấp"]),
-        toText(p.sdtLienHeKhanCap || p["SĐT LIÊN HỆ KHẨN CẤP"] || p["SĐT liên hệ khẩn cấp"]),
+        formatLeadingZero(p.sdtLienHeKhanCap || p["SĐT LIÊN HỆ KHẨN CẤP"] || p["SĐT liên hệ khẩn cấp"]),
         toText(p.ghiChu || p["GHI CHÚ"] || p["Ghi chú"])
       ]);
     }

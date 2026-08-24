@@ -58,47 +58,28 @@ const BIB_NAME_REGEX =
 // Email regex chuẩn
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Chuẩn hóa SĐT (xóa khoảng trắng, dấu gạch ngang, dấu chấm, đuôi .0 của Excel và tự thêm 0 nếu có 9 số hoặc định dạng +84/84)
+// Làm sạch SĐT (xóa khoảng trắng, dấu gạch ngang, dấu chấm, đuôi .0 của Excel - giữ nguyên vẹn dữ liệu)
 export const cleanPhone = (phone: any): string => {
   if (phone === null || phone === undefined) return '';
-  let str = String(phone).trim().replace(/\.0$/, '');
-  let cleaned = str.replace(/[\s\-\.\(\)]/g, '').trim();
-
-  // Nếu có tiền tố quốc tế +84 hoặc 84 -> chuyển về dạng chuẩn 0xxxxxxxxx
-  if (/^\+84\d{9,10}$/.test(cleaned)) {
-    cleaned = '0' + cleaned.slice(3);
-  } else if (/^84\d{9,10}$/.test(cleaned) && cleaned.length >= 11) {
-    cleaned = '0' + cleaned.slice(2);
-  }
-  // Nếu có 9 chữ số do Excel tự động xén mất số 0 ở đầu (VD: 912345678 -> 0912345678)
-  else if (/^\d{9}$/.test(cleaned)) {
-    cleaned = '0' + cleaned;
-  }
-
-  return cleaned;
+  const str = String(phone).trim().replace(/\.0$/, '');
+  return str.replace(/[\s\-\.\(\)]/g, '').trim();
 };
 
-// Chuẩn hóa CCCD / CMND / Hộ chiếu (xóa khoảng trắng, dấu gạch ngang, dấu chấm, đuôi .0 của Excel và tự động bù số 0 ở đầu nếu bị Excel xén mất)
+// Làm sạch CCCD / CMND / Hộ chiếu (xóa khoảng trắng, dấu gạch ngang, dấu chấm, đuôi .0 của Excel - giữ nguyên vẹn dữ liệu)
 export const cleanCccd = (cccd: any): string => {
   if (cccd === null || cccd === undefined) return '';
-  let str = String(cccd).trim().replace(/\.0$/, '');
-  let cleaned = str.replace(/[\s\-\.]/g, '').trim();
+  const str = String(cccd).trim().replace(/\.0$/, '');
+  return str.replace(/[\s\-\.]/g, '').trim();
+};
 
-  // Nếu là chuỗi số thuần túy bị Excel lưu dạng Number và cắt mất số 0 ở đầu:
-  // 1. Nếu có 11 chữ số -> CCCD 12 số bị cắt 1 số 0 ở đầu (VD: 34123456789 -> 034123456789)
-  if (/^\d{11}$/.test(cleaned)) {
-    cleaned = '0' + cleaned;
+// Hàm kiểm tra nếu dữ liệu có số 0 ở đầu thì bổ sung thêm ký tự ' để Google Sheet lưu dạng Text và không mất số 0
+export const ensureLeadingQuoteIfStartsWithZero = (val: any): string => {
+  if (val === null || val === undefined) return '';
+  const str = String(val).trim();
+  if (str.startsWith('0') && !str.startsWith("'")) {
+    return `'${str}`;
   }
-  // 2. Nếu có 10 chữ số -> CCCD 12 số có mã tỉnh 00x (VD: Hà Nội 001... -> 1201012345 -> 001201012345)
-  else if (/^\d{10}$/.test(cleaned)) {
-    cleaned = '00' + cleaned;
-  }
-  // 3. Nếu có 8 chữ số -> CMND 9 số bị cắt 1 số 0 ở đầu (VD: 12345678 -> 012345678)
-  else if (/^\d{8}$/.test(cleaned)) {
-    cleaned = '0' + cleaned;
-  }
-
-  return cleaned;
+  return str;
 };
 
 // Kiểm tra SĐT Việt Nam hợp lệ (10-11 chữ số, bắt đầu bằng 0 hoặc +84 / 84)

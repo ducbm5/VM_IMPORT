@@ -32,7 +32,7 @@ import {
 import * as XLSX from 'xlsx';
 import { StatusBanner } from './StatusBanner';
 import { EventItem, ExcelRowItem, ParticipantRecord, BatchRegistrationResult } from '../types';
-import { validateParticipant, ValidationOutput, cleanText } from '../utils/validator';
+import { validateParticipant, ValidationOutput, cleanText, ensureLeadingQuoteIfStartsWithZero } from '../utils/validator';
 import { normalizePerformancesWithAi, normalizeSinglePerformanceWithAi } from '../utils/aiNormalize';
 
 interface RegisterFormProps {
@@ -692,8 +692,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           cuLy: cleanCuLy,
           gioiTinh: r.gioiTinh,
           namSinh: r.namSinh,
-          sdt: r.sdt,
-          cccd: r.cccd,
+          sdt: ensureLeadingQuoteIfStartsWithZero(r.sdt),
+          cccd: ensureLeadingQuoteIfStartsWithZero(r.cccd),
           quocTich: r.quocTich,
           tinhThanh: r.tinhThanh,
           loaiAo: r.loaiAo,
@@ -701,7 +701,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           coAoFinisher: r.coAoFinisher,
           thanhTich: r.thanhTich,
           nguoiLienHeKhanCap: r.nguoiLienHeKhanCap,
-          sdtLienHeKhanCap: r.sdtLienHeKhanCap,
+          sdtLienHeKhanCap: ensureLeadingQuoteIfStartsWithZero(r.sdtLienHeKhanCap),
           ghiChu: r.ghiChu,
         };
       });
