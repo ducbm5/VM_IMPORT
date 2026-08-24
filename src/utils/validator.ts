@@ -15,20 +15,36 @@ const ALLOWED_SIZES = ['2XS', 'XS', 'S', 'M', 'L', 'XL', '2XL'];
 
 const ALLOWED_DISTANCES = ['5km', '10km', '21km', '42km'];
 
-// Regex hỗ trợ chữ cái tiếng Việt có dấu, ký tự Unicode và khoảng trắng
-export const isValidVietnameseName = (name: string): boolean => {
-  if (!name) return false;
-  // Chuẩn hóa NFC và thay khoảng trắng đặc biệt
-  const clean = name.normalize('NFC').replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ').trim();
-  // Cho phép tất cả chữ cái (Unicode \p{L}), dấu thanh tổ hợp (\p{M}) và khoảng trắng
-  return /^[\p{L}\p{M}\s]+$/u.test(clean);
+// Hàm làm sạch chuỗi: loại bỏ toàn bộ ký tự ẩn, zero-width, BOM, non-breaking space và chuẩn hóa NFC
+export const cleanText = (str: any): string => {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .normalize('NFC')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u00A0\u1680\u2000-\u200F\u2028\u2029\u202F\u205F\u3000\uFEFF\u00AD]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 };
 
-// Regex Tên trên BIB: Chữ cái (kể cả tiếng Việt), số, khoảng trắng. Tối đa 20 ký tự
+// Regex hỗ trợ chữ cái tiếng Việt có dấu, ký tự Unicode và khoảng trắng (hỗ trợ cả dấu gạch nối, dấu chấm, dấu nháy)
+export const isValidVietnameseName = (name: string): boolean => {
+  const clean = cleanText(name);
+  if (!clean) return false;
+  // Cho phép tất cả chữ cái (Unicode \p{L}), dấu thanh tổ hợp (\p{M}), khoảng trắng, dấu gạch nối, dấu chấm, dấu nháy đơn
+  return /^[\p{L}\p{M}\s.'-]+$/u.test(clean);
+};
+
+// Regex Tên trên BIB: Chữ cái (kể cả tiếng Việt), số, khoảng trắng, dấu gạch ngang, gạch dưới, chấm, ngoặc đơn, xuyệt, &, 2 chấm
 export const isValidBibName = (bib: string): boolean => {
-  if (!bib) return false;
-  const clean = bib.normalize('NFC').replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ').trim();
-  return /^[\p{L}\p{M}0-9\s]+$/u.test(clean);
+  const clean = cleanText(bib);
+  if (!clean) return false;
+  return /^[\p{L}\p{M}0-9\s._'()\/&:-]+$/u.test(clean);
+};
+
+// Regex Người liên hệ khẩn cấp: Tên người hoặc quan hệ (cho phép chữ cái, số, ngoặc đơn, gạch ngang, cộng...)
+export const isValidEmergencyContactName = (name: string): boolean => {
+  const clean = cleanText(name);
+  if (!clean) return false;
+  return /^[\p{L}\p{M}0-9\s._'()\/&:,+-]+$/u.test(clean);
 };
 
 // Regex hỗ trợ chữ cái tiếng Việt có dấu đầy đủ (dùng dự phòng)
@@ -306,7 +322,7 @@ export function validateParticipant(
   normalized.stt = (rawRecord.stt || '').trim();
 
   // 1. HỌ TÊN
-  const rawHoTen = (rawRecord.hoTen || '').trim();
+  const rawHoTen = cleanText(rawRecord.hoTen || '');
   if (!rawHoTen) {
     errors.push({ field: 'HỌ TÊN', message: 'Họ tên là bắt buộc nhập.' });
   } else {
@@ -324,10 +340,10 @@ export function validateParticipant(
       });
     }
   }
-  normalized.hoTen = rawHoTen.normalize('NFC');
+  normalized.hoTen = rawHoTen;
 
   // 2. EMAIL
-  const rawEmail = (rawRecord.email || '').trim();
+  const rawEmail = cleanText(rawRecord.email || '');
   if (!rawEmail) {
     errors.push({ field: 'EMAIL', message: 'Email là bắt buộc nhập.' });
   } else if (!EMAIL_REGEX.test(rawEmail)) {
@@ -339,7 +355,7 @@ export function validateParticipant(
   normalized.email = rawEmail;
 
   // 3. TÊN TRÊN BIB
-  const rawBib = (rawRecord.tenTrenBib || '').trim();
+  const rawBib = cleanText(rawRecord.tenTrenBib || '');
   if (!rawBib) {
     errors.push({ field: 'TÊN TRÊN BIB', message: 'Tên trên BIB là bắt buộc nhập.' });
   } else {
@@ -352,11 +368,11 @@ export function validateParticipant(
     if (!isValidBibName(rawBib) && !BIB_NAME_REGEX.test(rawBib)) {
       errors.push({
         field: 'TÊN TRÊN BIB',
-        message: 'Tên trên BIB chỉ gồm chữ cái, số và khoảng trắng (không chứa ký tự đặc biệt).',
+        message: 'Tên trên BIB chỉ gồm chữ cái, số, khoảng trắng và các ký tự cơ bản (không chứa ký tự đặc biệt).',
       });
     }
   }
-  normalized.tenTrenBib = rawBib.normalize('NFC');
+  normalized.tenTrenBib = rawBib;
 
   // 4. CỰ LY
   const rawCuLy = (rawRecord.cuLy || '').trim();
@@ -542,13 +558,19 @@ export function validateParticipant(
   normalized.thanhTich = formattedThanhTich;
 
   // 14. NGƯỜI LIÊN HỆ KHẨN CẤP
-  const rawNguoiKhanCap = (rawRecord.nguoiLienHeKhanCap || '').trim();
+  const rawNguoiKhanCap = cleanText(rawRecord.nguoiLienHeKhanCap || '');
   if (!rawNguoiKhanCap) {
     errors.push({
       field: 'NGƯỜI LIÊN HỆ KHẨN CẤP',
       message: 'Họ tên người liên hệ khẩn cấp là bắt buộc nhập.',
     });
   } else {
+    if (!isValidEmergencyContactName(rawNguoiKhanCap)) {
+      errors.push({
+        field: 'NGƯỜI LIÊN HỆ KHẨN CẤP',
+        message: 'Họ tên người liên hệ khẩn cấp chỉ gồm chữ cái, khoảng trắng và các ký tự quan hệ cơ bản.',
+      });
+    }
     if (rawHoTen && normalizeName(rawNguoiKhanCap) === normalizeName(rawHoTen)) {
       errors.push({
         field: 'NGƯỜI LIÊN HỆ KHẨN CẤP',
@@ -556,7 +578,7 @@ export function validateParticipant(
       });
     }
   }
-  normalized.nguoiLienHeKhanCap = rawNguoiKhanCap.normalize('NFC');
+  normalized.nguoiLienHeKhanCap = rawNguoiKhanCap;
 
   // 15. SĐT LIÊN HỆ KHẨN CẤP (Tự động thêm số 0 ở đầu nếu 9 số do Excel xén)
   const rawSdtKhanCap = cleanPhone(rawRecord.sdtLienHeKhanCap || '');

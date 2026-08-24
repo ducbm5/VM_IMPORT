@@ -32,7 +32,7 @@ import {
 import * as XLSX from 'xlsx';
 import { StatusBanner } from './StatusBanner';
 import { EventItem, ExcelRowItem, ParticipantRecord, BatchRegistrationResult } from '../types';
-import { validateParticipant, ValidationOutput } from '../utils/validator';
+import { validateParticipant, ValidationOutput, cleanText } from '../utils/validator';
 import { normalizePerformancesWithAi, normalizeSinglePerformanceWithAi } from '../utils/aiNormalize';
 
 interface RegisterFormProps {
@@ -424,7 +424,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
           const getVal = (colIdx: number): string => {
             if (row[colIdx] !== undefined && row[colIdx] !== null) {
-              let val = String(row[colIdx]).trim();
+              let val = cleanText(row[colIdx]);
               val = val.replace(/\.0$/, '');
               return val;
             }
