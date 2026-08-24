@@ -15,13 +15,29 @@ const ALLOWED_SIZES = ['2XS', 'XS', 'S', 'M', 'L', 'XL', '2XL'];
 
 const ALLOWED_DISTANCES = ['5km', '10km', '21km', '42km'];
 
-// Regex hỗ trợ chữ cái tiếng Việt có dấu và khoảng trắng
-const VIETNAMESE_NAME_REGEX =
-  /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s]+$/;
+// Regex hỗ trợ chữ cái tiếng Việt có dấu, ký tự Unicode và khoảng trắng
+export const isValidVietnameseName = (name: string): boolean => {
+  if (!name) return false;
+  // Chuẩn hóa NFC và thay khoảng trắng đặc biệt
+  const clean = name.normalize('NFC').replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ').trim();
+  // Cho phép tất cả chữ cái (Unicode \p{L}), dấu thanh tổ hợp (\p{M}) và khoảng trắng
+  return /^[\p{L}\p{M}\s]+$/u.test(clean);
+};
 
 // Regex Tên trên BIB: Chữ cái (kể cả tiếng Việt), số, khoảng trắng. Tối đa 20 ký tự
+export const isValidBibName = (bib: string): boolean => {
+  if (!bib) return false;
+  const clean = bib.normalize('NFC').replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ').trim();
+  return /^[\p{L}\p{M}0-9\s]+$/u.test(clean);
+};
+
+// Regex hỗ trợ chữ cái tiếng Việt có dấu đầy đủ (dùng dự phòng)
+const VIETNAMESE_NAME_REGEX =
+  /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼẾỀỂưăạảấầẩẫậắằẳẵặẹẻẽếềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s]+$/;
+
+// Regex Tên trên BIB dự phòng
 const BIB_NAME_REGEX =
-  /^[a-zA-Z0-9ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s]+$/;
+  /^[a-zA-Z0-9ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼẾỀỂưăạảấầẩẫậắằẳẵặẹẻẽếềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s]+$/;
 
 // Email regex chuẩn
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -301,14 +317,14 @@ export function validateParticipant(
         message: 'Họ tên phải có ít nhất 2 từ (Họ + Tên).',
       });
     }
-    if (!VIETNAMESE_NAME_REGEX.test(rawHoTen)) {
+    if (!isValidVietnameseName(rawHoTen) && !VIETNAMESE_NAME_REGEX.test(rawHoTen)) {
       errors.push({
         field: 'HỌ TÊN',
         message: 'Họ tên chỉ chứa chữ cái và khoảng trắng (không chứa số hoặc ký tự đặc biệt).',
       });
     }
   }
-  normalized.hoTen = rawHoTen;
+  normalized.hoTen = rawHoTen.normalize('NFC');
 
   // 2. EMAIL
   const rawEmail = (rawRecord.email || '').trim();
@@ -333,14 +349,14 @@ export function validateParticipant(
         message: `Tên trên BIB không vượt quá 20 ký tự (hiện tại ${rawBib.length} ký tự).`,
       });
     }
-    if (!BIB_NAME_REGEX.test(rawBib)) {
+    if (!isValidBibName(rawBib) && !BIB_NAME_REGEX.test(rawBib)) {
       errors.push({
         field: 'TÊN TRÊN BIB',
         message: 'Tên trên BIB chỉ gồm chữ cái, số và khoảng trắng (không chứa ký tự đặc biệt).',
       });
     }
   }
-  normalized.tenTrenBib = rawBib;
+  normalized.tenTrenBib = rawBib.normalize('NFC');
 
   // 4. CỰ LY
   const rawCuLy = (rawRecord.cuLy || '').trim();
@@ -540,7 +556,7 @@ export function validateParticipant(
       });
     }
   }
-  normalized.nguoiLienHeKhanCap = rawNguoiKhanCap;
+  normalized.nguoiLienHeKhanCap = rawNguoiKhanCap.normalize('NFC');
 
   // 15. SĐT LIÊN HỆ KHẨN CẤP (Tự động thêm số 0 ở đầu nếu 9 số do Excel xén)
   const rawSdtKhanCap = cleanPhone(rawRecord.sdtLienHeKhanCap || '');

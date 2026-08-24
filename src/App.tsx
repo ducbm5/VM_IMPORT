@@ -52,6 +52,7 @@ export default function App() {
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isStep2Completed, setIsStep2Completed] = useState(false);
 
   // Active step screen state: 1 or 2
   const [activeStep, setActiveStep] = useState<1 | 2>(1);
@@ -242,6 +243,8 @@ export default function App() {
         mode,
       });
 
+      setIsStep2Completed(true);
+
       return result;
     } catch (err: any) {
       addLog({
@@ -268,6 +271,7 @@ export default function App() {
         onOpenCodeGuide={handleOpenAdmin}
         eventsCount={events.length}
         onOpenHistory={() => setIsHistoryOpen(true)}
+        showHistoryButton={isStep2Completed}
       />
 
       {/* Main Container */}
@@ -383,6 +387,8 @@ export default function App() {
               onSubmitBatch={handleSubmitBatch}
               isMockMode={isMockMode}
               onGoToStep1={() => setActiveStep(1)}
+              onOpenHistory={() => setIsHistoryOpen(true)}
+              onStep2Success={() => setIsStep2Completed(true)}
             />
           </div>
         )}

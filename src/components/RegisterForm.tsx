@@ -46,6 +46,8 @@ interface RegisterFormProps {
   }) => Promise<BatchRegistrationResult | null>;
   isMockMode: boolean;
   onGoToStep1?: () => void;
+  onOpenHistory?: () => void;
+  onStep2Success?: () => void;
 }
 
 // 18 cột tiêu chuẩn chính xác theo yêu cầu
@@ -161,6 +163,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   onSubmitBatch,
   isMockMode,
   onGoToStep1,
+  onOpenHistory,
+  onStep2Success,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [spreadsheetId, setSpreadsheetId] = useState('');
@@ -708,6 +712,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         setStatusDetails(`Cập nhật lúc: ${result.timestamp} | Spreadsheet ID: ${targetSpreadsheetId.trim()}`);
         setLastBatchResult(result);
         setParsedRows((prev) => prev.map((r) => ({ ...r, status: 'success' })));
+        onStep2Success?.();
       }
     } catch (err: any) {
       setStatus('error');
@@ -1229,31 +1234,45 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           )}
         </button>
 
-        {/* Last Batch Result Toast */}
+        {/* Last Batch Result Toast - HIỂN THỊ CHI TIẾT FILE GOOGLE SHEET KHI HOÀN THÀNH BƯỚC 2 */}
         {lastBatchResult && status === 'success' && (
-          <div className="p-5 bg-[#F8F6F0] border border-[#2D2D2D] space-y-3 font-mono">
+          <div className="p-5 bg-[#F8F6F0] border border-[#2D2D2D] space-y-4 font-mono">
             <div className="flex items-center gap-2 text-[#2D2D2D] font-bold text-xs uppercase font-serif">
-              <CheckCircle2 className="w-4 h-4 text-[#2D2D2D] flex-shrink-0" />
-              <span>GHI 18 CỘT DỮ LIỆU VÀO GOOGLE SHEET THÀNH CÔNG!</span>
+              <CheckCircle2 className="w-5 h-5 text-[#2D2D2D] flex-shrink-0" />
+              <span className="text-sm">HOÀN TẤT BƯỚC 2: GHI 18 CỘT DỮ LIỆU VÀO GOOGLE SHEET THÀNH CÔNG!</span>
             </div>
-            <div className="text-xs text-[#2D2D2D] bg-[#E5E2D9] p-4 border border-[#2D2D2D] space-y-1.5">
+            <div className="text-xs text-[#2D2D2D] bg-[#E5E2D9] p-4 border border-[#2D2D2D] space-y-2">
               <div>
-                <span className="text-stone-600">Số dòng đã ghi: </span>
-                <strong className="text-[#2D2D2D] font-bold">{lastBatchResult.successCount} vận động viên</strong>
+                <span className="text-stone-600">Tên File Sheet: </span>
+                <strong className="text-[#2D2D2D] font-serif font-bold text-sm">
+                  {selectedEvent?.eventName || selectedEvent?.requester || 'Google Sheet Giải Đấu'}
+                </strong>
               </div>
-              <div>
-                <span className="text-stone-600">Thời gian ghi: </span>
-                <span className="font-bold">{lastBatchResult.timestamp}</span>
+              <div className="truncate">
+                <span className="text-stone-600">Spreadsheet ID: </span>
+                <span className="text-[#2D2D2D] font-mono text-[11px] bg-[#F8F6F0] px-2 py-0.5 border border-[#2D2D2D] font-bold">
+                  {selectedEvent?.spreadsheetId || lastBatchResult.spreadsheetId}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-x-6 gap-y-1 pt-1">
+                <div>
+                  <span className="text-stone-600">Số dòng đã ghi: </span>
+                  <strong className="text-[#2D2D2D] font-bold">{lastBatchResult.successCount} vận động viên</strong>
+                </div>
+                <div>
+                  <span className="text-stone-600">Thời gian hoàn tất: </span>
+                  <span className="font-bold">{lastBatchResult.timestamp}</span>
+                </div>
               </div>
             </div>
 
-            {/* 2 Buttons */}
+            {/* 3 Action Buttons */}
             <div className="flex flex-wrap items-center gap-3 pt-1 font-mono">
               <a
                 href="https://drive.google.com/drive/folders/1Kjc3UYkNkYaHJQ6JrLZX15QPPWfZEaLZ"
                 target="_blank"
                 rel="noreferrer"
-                className="px-4 py-2 bg-[#2D2D2D] hover:bg-[#E5E2D9] hover:text-[#2D2D2D] text-[#F8F6F0] text-xs font-bold flex items-center gap-2 border border-[#2D2D2D] transition-colors uppercase tracking-wider"
+                className="px-4 py-2.5 bg-[#2D2D2D] hover:bg-[#E5E2D9] hover:text-[#2D2D2D] text-[#F8F6F0] text-xs font-bold flex items-center gap-2 border border-[#2D2D2D] transition-colors uppercase tracking-wider"
               >
                 <Folder className="w-4 h-4" />
                 <span>1/ VÀO FOLDER DRIVE</span>
@@ -1264,12 +1283,23 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                 href={selectedEvent?.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${lastBatchResult.spreadsheetId}`}
                 target="_blank"
                 rel="noreferrer"
-                className="px-4 py-2 bg-[#E5E2D9] hover:bg-[#2D2D2D] hover:text-[#F8F6F0] text-[#2D2D2D] text-xs font-bold flex items-center gap-2 border border-[#2D2D2D] transition-colors uppercase tracking-wider"
+                className="px-4 py-2.5 bg-[#E5E2D9] hover:bg-[#2D2D2D] hover:text-[#F8F6F0] text-[#2D2D2D] text-xs font-bold flex items-center gap-2 border border-[#2D2D2D] transition-colors uppercase tracking-wider"
               >
                 <FileSpreadsheet className="w-4 h-4" />
                 <span>2/ MỞ FILE SHEET</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
+
+              {onOpenHistory && (
+                <button
+                  type="button"
+                  onClick={onOpenHistory}
+                  className="px-4 py-2.5 bg-[#F8F6F0] hover:bg-[#2D2D2D] hover:text-[#F8F6F0] text-[#2D2D2D] text-xs font-bold flex items-center gap-2 border border-[#2D2D2D] transition-colors uppercase tracking-wider cursor-pointer ml-auto"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span>3/ DANH SÁCH SHEET ĐÃ TẠO</span>
+                </button>
+              )}
             </div>
           </div>
         )}

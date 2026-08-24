@@ -9,12 +9,14 @@ interface HeaderProps {
   onOpenCodeGuide: () => void;
   eventsCount: number;
   onOpenHistory: () => void;
+  showHistoryButton?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenCodeGuide,
   eventsCount,
   onOpenHistory,
+  showHistoryButton = false,
 }) => {
   return (
     <header className="bg-[#2D2D2D] text-[#F8F6F0] border-b border-[#2D2D2D] sticky top-0 z-30 font-serif">
@@ -39,16 +41,18 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-3 font-mono flex-wrap">
-          <button
-            onClick={onOpenHistory}
-            className="px-3.5 py-2 bg-[#E5E2D9] hover:bg-[#F8F6F0] text-[#2D2D2D] font-bold border border-[#2D2D2D] flex items-center gap-2 cursor-pointer transition-colors text-xs tracking-wider uppercase"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-[#2D2D2D]" />
-            <span>DANH SÁCH SHEET ĐÃ TẠO ({eventsCount})</span>
-          </button>
-        </div>
+        {/* Action Controls - Chỉ hiển thị khi hoàn thành Bước 2 */}
+        {showHistoryButton && (
+          <div className="flex items-center gap-3 font-mono flex-wrap">
+            <button
+              onClick={onOpenHistory}
+              className="px-3.5 py-2 bg-[#E5E2D9] hover:bg-[#F8F6F0] text-[#2D2D2D] font-bold border border-[#2D2D2D] flex items-center gap-2 cursor-pointer transition-colors text-xs tracking-wider uppercase shadow-xs animate-in fade-in duration-300"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-[#2D2D2D]" />
+              <span>DANH SÁCH SHEET ĐÃ TẠO ({eventsCount})</span>
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

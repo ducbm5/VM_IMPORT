@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlusCircle, ExternalLink, Loader2, CheckCircle2, FileText, Folder, ArrowRight } from 'lucide-react';
+import { PlusCircle, Loader2, CheckCircle2, FileText, ArrowRight } from 'lucide-react';
 import { StatusBanner } from './StatusBanner';
 import { EventItem } from '../types';
 
@@ -49,8 +49,8 @@ export const CreateEventForm: React.FC<CreateEventFormProps> = ({
 
       if (result) {
         setStatus('success');
-        setStatusMessage('Tạo Google Sheet mới thành công!');
-        setStatusDetails(`Spreadsheet ID: ${result.spreadsheetId}`);
+        setStatusMessage('Khởi tạo yêu cầu thành công! Vui lòng chuyển sang Bước 2 để import danh sách vận động viên.');
+        setStatusDetails(`Yêu cầu: "${result.eventName}" đã được khởi tạo sẵn sàng.`);
         setCreatedEvent(result);
         onSelectForRegistration(result);
       }
@@ -92,7 +92,7 @@ export const CreateEventForm: React.FC<CreateEventFormProps> = ({
           {/* Người yêu cầu */}
           <div>
             <label className="block text-xs font-mono font-bold text-[#2D2D2D] uppercase tracking-wider mb-2">
-              TÊN GIẢI - TÊN NGƯỜI YÊU CẦU * <span className="text-stone-600 font-normal text-[11px]">(DÙNG LÀM TÊN FILE GOOGLE SHEET)</span>
+              TÊN GIẢI - TÊN NGƯỜI YÊU CẦU * <span className="text-stone-600 font-normal text-[11px]">(THÔNG TIN ĐỊNH DANH YÊU CẦU)</span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#2D2D2D]">
@@ -126,73 +126,48 @@ export const CreateEventForm: React.FC<CreateEventFormProps> = ({
             {status === 'loading' ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-[#F8F6F0]" />
-                <span>Đang kết nối & Tạo File Sheet...</span>
+                <span>Đang kết nối & Khởi tạo yêu cầu...</span>
               </>
             ) : (
               <>
                 <PlusCircle className="w-4 h-4 text-[#F8F6F0]" />
-                <span>TẠO FILE GOOGLE SHEET MỚI (HOÀN THÀNH BƯỚC 1)</span>
+                <span>KHỞI TẠO YÊU CẦU (HOÀN THÀNH BƯỚC 1)</span>
               </>
             )}
           </button>
         </form>
 
-        {/* Success Output Section */}
+        {/* Success Output Section - Không hiển thị link file sheet theo yêu cầu */}
         {createdEvent && (
           <div className="p-5 bg-[#F8F6F0] border border-[#2D2D2D] space-y-4">
-            <div className="flex items-center gap-2 text-[#2D2D2D] font-mono font-bold text-xs uppercase">
+            <div className="flex items-center gap-2 text-[#2D2D2D] font-mono font-bold text-xs uppercase font-serif">
               <CheckCircle2 className="w-4 h-4 text-[#2D2D2D]" />
-              <span>ĐÃ TẠO FILE GOOGLE SHEET THÀNH CÔNG! BƯỚC 1 HOÀN TẤT.</span>
+              <span>ĐÃ HOÀN TẤT BƯỚC 1: KHỞI TẠO THÔNG TIN YÊU CẦU THÀNH CÔNG!</span>
             </div>
 
-            <div className="space-y-1.5 text-xs text-[#2D2D2D] font-mono bg-[#E5E2D9] p-4 border border-[#2D2D2D]">
+            <div className="space-y-1 text-xs text-[#2D2D2D] font-mono bg-[#E5E2D9] p-4 border border-[#2D2D2D]">
               <div>
-                <span className="text-stone-600">Tên File Sheet: </span>
+                <span className="text-stone-600">Yêu cầu đã khởi tạo: </span>
                 <strong className="text-[#2D2D2D] font-serif font-bold">{createdEvent.eventName}</strong>
               </div>
-              <div className="truncate">
-                <span className="text-stone-600">Spreadsheet ID: </span>
-                <span className="text-[#2D2D2D] font-mono text-[11px] bg-[#F8F6F0] px-2 py-0.5 border border-[#2D2D2D] font-bold">
-                  {createdEvent.spreadsheetId}
-                </span>
-              </div>
+              <p className="text-[11px] text-stone-600 pt-1">
+                ✓ Đã hoàn thành Bước 1. Vui lòng bấm tiếp tục để chuyển sang Bước 2 tải lên file Excel (18 cột).
+              </p>
             </div>
 
-            {/* Buttons */}
-            <div className="flex flex-wrap items-center gap-3 pt-1 font-mono">
-              <a
-                href={`https://drive.google.com/drive/folders/${folderId.trim() || '1Kjc3UYkNkYaHJQ6JrLZX15QPPWfZEaLZ'}`}
-                target="_blank"
-                rel="noreferrer"
-                className="px-4 py-2.5 bg-[#2D2D2D] hover:bg-[#E5E2D9] hover:text-[#2D2D2D] text-[#F8F6F0] text-xs font-bold flex items-center gap-2 border border-[#2D2D2D] transition-colors uppercase tracking-wider"
-              >
-                <Folder className="w-4 h-4" />
-                <span>1/ VÀO FOLDER DRIVE</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-
-              <a
-                href={createdEvent.spreadsheetUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="px-4 py-2.5 bg-[#E5E2D9] hover:bg-[#2D2D2D] hover:text-[#F8F6F0] text-[#2D2D2D] text-xs font-bold flex items-center gap-2 border border-[#2D2D2D] transition-colors uppercase tracking-wider"
-              >
-                <FileText className="w-4 h-4" />
-                <span>2/ MỞ FILE SHEET</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-
-              {onGoToStep2 && (
+            {/* Next Step Button */}
+            {onGoToStep2 && (
+              <div className="flex justify-end pt-1 font-mono">
                 <button
                   type="button"
                   onClick={onGoToStep2}
-                  className="px-5 py-2.5 bg-[#2D2D2D] hover:bg-[#E5E2D9] hover:text-[#2D2D2D] text-[#F8F6F0] text-xs font-bold flex items-center gap-2 border border-[#2D2D2D] transition-colors ml-auto cursor-pointer uppercase tracking-widest"
+                  className="w-full sm:w-auto px-6 py-3 bg-[#2D2D2D] hover:bg-[#E5E2D9] hover:text-[#2D2D2D] text-[#F8F6F0] text-xs font-bold flex items-center justify-center gap-2 border border-[#2D2D2D] transition-colors cursor-pointer uppercase tracking-widest shadow-xs"
                 >
                   <span>TIẾP TỤC SANG BƯỚC 2 (IMPORT EXCEL)</span>
                   <ArrowRight className="w-4 h-4 text-[#F8F6F0]" />
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>
