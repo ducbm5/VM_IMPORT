@@ -11,9 +11,20 @@ export interface ValidationOutput {
   errors?: FieldError[];
 }
 
-const ALLOWED_SIZES = ['2XS', 'XS', 'S', 'M', 'L', 'XL', '2XL'];
+export const ALLOWED_SIZES = ['2XS', 'XS', 'S', 'M', 'L', 'XL', '2XL'];
 
-const ALLOWED_DISTANCES = ['5km', '10km', '21km', '42km'];
+export const ALLOWED_DISTANCES = ['5km', '10km', '21km', '42km'];
+
+// Hàm chuẩn hóa cự ly sang 1 trong 4 cự ly: 5km, 10km, 21km, 42km
+export const normalizeCuLy = (rawCuLy: any): string => {
+  if (rawCuLy === null || rawCuLy === undefined) return '';
+  const clean = String(rawCuLy).toLowerCase().replace(/\s+/g, '');
+  if (clean === '5km' || clean === '5k' || clean === '5' || clean === '5.0') return '5km';
+  if (clean === '10km' || clean === '10k' || clean === '10' || clean === '10.0') return '10km';
+  if (clean === '21km' || clean === '21k' || clean === 'hm' || clean === '21' || clean === '21.0') return '21km';
+  if (clean === '42km' || clean === '42k' || clean === 'fm' || clean === '42' || clean === '42.0') return '42km';
+  return clean;
+};
 
 // Hàm làm sạch chuỗi: loại bỏ toàn bộ ký tự ẩn, zero-width, BOM, non-breaking space và chuẩn hóa NFC
 export const cleanText = (str: any): string => {
@@ -393,11 +404,7 @@ export function validateParticipant(
   if (!rawCuLy) {
     errors.push({ field: 'CỰ LY', message: 'Cự ly là bắt buộc nhập.' });
   } else {
-    const lowerCuLy = rawCuLy.toLowerCase().replace(/\s+/g, '');
-    if (lowerCuLy === '5km' || lowerCuLy === '5k' || lowerCuLy === '5' || lowerCuLy === '5.0') matchedCuLy = '5km';
-    else if (lowerCuLy === '10km' || lowerCuLy === '10k' || lowerCuLy === '10' || lowerCuLy === '10.0') matchedCuLy = '10km';
-    else if (lowerCuLy === '21km' || lowerCuLy === '21k' || lowerCuLy === 'hm' || lowerCuLy === '21' || lowerCuLy === '21.0') matchedCuLy = '21km';
-    else if (lowerCuLy === '42km' || lowerCuLy === '42k' || lowerCuLy === 'fm' || lowerCuLy === '42' || lowerCuLy === '42.0') matchedCuLy = '42km';
+    matchedCuLy = normalizeCuLy(rawCuLy);
 
     if (!matchedCuLy || !ALLOWED_DISTANCES.includes(matchedCuLy)) {
       errors.push({

@@ -32,7 +32,7 @@ import {
 import * as XLSX from 'xlsx';
 import { StatusBanner } from './StatusBanner';
 import { EventItem, ExcelRowItem, ParticipantRecord, BatchRegistrationResult } from '../types';
-import { validateParticipant, ValidationOutput, cleanText, ensureLeadingQuoteIfStartsWithZero } from '../utils/validator';
+import { validateParticipant, ValidationOutput, cleanText, ensureLeadingQuoteIfStartsWithZero, normalizeCuLy } from '../utils/validator';
 import { normalizePerformancesWithAi, normalizeSinglePerformanceWithAi } from '../utils/aiNormalize';
 
 interface RegisterFormProps {
@@ -1179,7 +1179,15 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                           )}
                         </td>
                         <td className="px-3 py-2 font-bold border-r border-[#E0DDD5]">{row.coAo || <span className="text-rose-600 italic">Thiếu</span>}</td>
-                        <td className="px-3 py-2 font-bold border-r border-[#E0DDD5]">{row.coAoFinisher || <span className="text-rose-600 italic">Thiếu</span>}</td>
+                        <td className="px-3 py-2 font-bold border-r border-[#E0DDD5]">
+                          {row.coAoFinisher ? (
+                            <span>{row.coAoFinisher}</span>
+                          ) : row.cuLy && finisherDistances.includes(normalizeCuLy(row.cuLy)) ? (
+                            <span className="text-rose-600 italic">Thiếu</span>
+                          ) : (
+                            <span className="text-stone-400 font-normal">-</span>
+                          )}
+                        </td>
                         <td className="px-3 py-2 border-r border-[#E0DDD5]">{row.thanhTich || '-'}</td>
                         <td className="px-3 py-2 border-r border-[#E0DDD5]">{row.nguoiLienHeKhanCap || <span className="text-rose-600 italic">Thiếu</span>}</td>
                         <td className="px-3 py-2 border-r border-[#E0DDD5]">{row.sdtLienHeKhanCap || <span className="text-rose-600 italic">Thiếu</span>}</td>
@@ -1673,10 +1681,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                 <div>
                   <label className="font-bold block mb-1">
                     14. CỠ ÁO FINISHER{' '}
-                    {finisherDistances.includes(editFormData.cuLy?.toLowerCase()) ? (
+                    {finisherDistances.includes(normalizeCuLy(editFormData.cuLy)) ? (
                       <span className="text-red-600 font-bold">* (Bắt buộc)</span>
                     ) : (
-                      <span className="text-stone-500 font-normal">(Phải để trống cho cự ly {editFormData.cuLy})</span>
+                      <span className="text-stone-500 font-normal">(Phải để trống cho cự ly {editFormData.cuLy || 'này'})</span>
                     )}
                   </label>
                   <select
