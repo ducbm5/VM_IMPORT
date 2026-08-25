@@ -1,8 +1,9 @@
 import { GasApiResponse } from '../types';
 
 /**
- * Gọi Google Apps Script Web App API thông qua Fetch API
- * Với GAS Web App, sử dụng `Content-Type: text/plain;charset=utf-8` tránh lỗi CORS Preflight
+ * Gọi Google Apps Script Web App API:
+ * 1. Ưu tiên gọi qua backend proxy `/api/gas-proxy` để tránh 100% các lỗi xung đột đa tài khoản Google (Multi-Account Google Login), lỗi Cookie CORS và Cache của trình duyệt.
+ * 2. Fallback gọi trực tiếp từ client nhưng bắt buộc `credentials: 'omit'` (không gửi cookie tài khoản) và `cache: 'no-store'` (không bị dính cache).
  */
 export async function callGasWebScript(
   gasUrl: string,
@@ -14,12 +15,36 @@ export async function callGasWebScript(
 
   const cleanUrl = gasUrl.trim();
 
+  // Ưu tiên 1: Chuyển tiếp qua Backend Proxy (Server-side Node.js không có cookie trình duyệt, không bị redirect multi-login)
+  try {
+    const proxyResponse = await fetch('/api/gas-proxy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        gasUrl: cleanUrl,
+        payload: payload,
+      }),
+    });
+
+    if (proxyResponse.ok) {
+      const data: GasApiResponse = await proxyResponse.json();
+      return data;
+    }
+  } catch (proxyError) {
+    console.warn('Server-side GAS proxy unavailable, falling back to direct client fetch:', proxyError);
+  }
+
+  // Ưu tiên 2: Gọi trực tiếp từ Client với credentials: 'omit' & cache: 'no-store'
   try {
     const response = await fetch(cleanUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8',
       },
+      credentials: 'omit', // Bắt buộc 'omit' để trình duyệt không gửi cookie Google session, tránh bị Google redirect sang AccountChooser
+      cache: 'no-store',   // Bắt buộc 'no-store' để không bị dính cache trình duyệt giữa các máy/phiên làm việc
       body: JSON.stringify(payload),
     });
 

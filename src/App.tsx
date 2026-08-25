@@ -64,6 +64,22 @@ export default function App() {
 
   // Auto-open Admin/Guide modal if URL path is /admin or hash is #admin
   useEffect(() => {
+    // Tự động đồng bộ cấu hình mặc định từ server nếu trên máy client chưa có dữ liệu cấu hình
+    fetch('/api/config')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((cfg) => {
+        if (cfg) {
+          if (cfg.gasUrl && !localStorage.getItem(STORAGE_KEYS.GAS_URL)) {
+            setGasUrl(cfg.gasUrl);
+            setIsMockMode(false);
+          }
+          if (cfg.folderId && !localStorage.getItem(STORAGE_KEYS.FOLDER_ID)) {
+            setFolderId(cfg.folderId);
+          }
+        }
+      })
+      .catch(() => {});
+
     const handleRoute = () => {
       const path = window.location.pathname;
       const hash = window.location.hash;

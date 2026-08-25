@@ -67,6 +67,65 @@ async function startServer() {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  // App configuration endpoint
+  app.get("/api/config", (_req, res) => {
+    res.json({
+      gasUrl: process.env.VITE_GAS_WEB_APP_URL || process.env.GAS_WEB_APP_URL || "",
+      folderId: process.env.VITE_GOOGLE_FOLDER_ID || process.env.GOOGLE_FOLDER_ID || "1Kjc3UYkNkYaHJQ6JrLZX15QPPWfZEaLZ",
+    });
+  });
+
+  // Google Apps Script Proxy Endpoint
+  // Xử lý chuyển tiếp request tới Google Apps Script trên server Node.js:
+  // - Tránh hoàn toàn lỗi xung đột đăng nhập nhiều tài khoản Google (Multi-Account Google Login) trên trình duyệt
+  // - Tránh lỗi CORS do Google redirect sang trang AccountChooser / ServiceLogin khi có cookie
+  // - Không bị dính Cache hay session cookie của trình duyệt
+  app.post("/api/gas-proxy", async (req, res) => {
+    try {
+      const { gasUrl, payload } = req.body;
+      const targetUrl = (gasUrl || process.env.VITE_GAS_WEB_APP_URL || process.env.GAS_WEB_APP_URL || "").trim();
+
+      if (!targetUrl) {
+        return res.status(400).json({
+          success: false,
+          message: "Chưa cấu hình Google Apps Script URL.",
+        });
+      }
+
+      const gasResponse = await fetch(targetUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8",
+        },
+        body: JSON.stringify(payload || {}),
+        redirect: "follow",
+      });
+
+      if (!gasResponse.ok) {
+        return res.status(gasResponse.status).json({
+          success: false,
+          message: `Google Apps Script trả về lỗi HTTP ${gasResponse.status}: ${gasResponse.statusText}`,
+        });
+      }
+
+      const text = await gasResponse.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { success: true, raw: text };
+      }
+
+      return res.json(data);
+    } catch (error: any) {
+      console.error("GAS Proxy error:", error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || "Lỗi kết nối từ server tới Google Apps Script",
+      });
+    }
+  });
+
   // Normalize batch performances using Gemini AI
   app.post("/api/ai/normalize-performance", async (req, res) => {
     try {
