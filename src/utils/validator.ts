@@ -542,18 +542,27 @@ export function validateParticipant(
   const isFinisherShirtRequired = matchedCuLy ? finisherDistances.includes(matchedCuLy) : false;
   const rawCoAoFinisher = (rawRecord.coAoFinisher || '').trim().toUpperCase();
 
-  if (!rawCoAoFinisher) {
-    if (isFinisherShirtRequired) {
+  if (isFinisherShirtRequired) {
+    // 1. Cự ly CÓ áp dụng áo Finisher -> BẮT BUỘC nhập và phải đúng size hợp lệ
+    if (!rawCoAoFinisher) {
       errors.push({
         field: 'CỠ ÁO FINISHER',
         message: `Cỡ áo Finisher là bắt buộc nhập đối với cự ly ${matchedCuLy}.`,
       });
+    } else if (!ALLOWED_SIZES.includes(rawCoAoFinisher)) {
+      errors.push({
+        field: 'CỠ ÁO FINISHER',
+        message: `Cỡ áo Finisher không hợp lệ (${rawCoAoFinisher}). Chỉ chấp nhận 1 trong các size: ${ALLOWED_SIZES.join(', ')}.`,
+      });
     }
-  } else if (!ALLOWED_SIZES.includes(rawCoAoFinisher)) {
-    errors.push({
-      field: 'CỠ ÁO FINISHER',
-      message: `Cỡ áo Finisher không hợp lệ (${rawCoAoFinisher}). Chỉ chấp nhận 1 trong các size: ${ALLOWED_SIZES.join(', ')}.`,
-    });
+  } else {
+    // 2. Cự ly KHÔNG áp dụng áo Finisher -> KHÔNG ĐƯỢC có dữ liệu, nếu có data thì BÁO LỖI và không cho submit
+    if (rawCoAoFinisher) {
+      errors.push({
+        field: 'CỠ ÁO FINISHER',
+        message: `Cự ly ${matchedCuLy || 'này'} không áp dụng áo Finisher. Vui lòng để trống ô Cỡ áo Finisher (đang nhập: "${rawCoAoFinisher}").`,
+      });
+    }
   }
   normalized.coAoFinisher = rawCoAoFinisher;
 

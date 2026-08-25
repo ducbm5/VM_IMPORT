@@ -150,7 +150,7 @@ const SAMPLE_RUNNERS: ParticipantRecord[] = [
     tinhThanh: 'TP. Hồ Chí Minh',
     coAo: 'XL',
     loaiAo: 'TSHIRT',
-    coAoFinisher: 'XL',
+    coAoFinisher: '', // 10km mặc định không có áo Finisher -> để trống
     thanhTich: '00:52',
     nguoiLienHeKhanCap: 'Phạm Hồng Nhung',
     sdtLienHeKhanCap: '0944556677',
@@ -845,7 +845,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               CẤU HÌNH CỰ LY ÁP DỤNG ÁO FINISHER (BẮT BUỘC NHẬP SIZE ÁO FINISHER):
             </span>
             <span className="text-[10px] text-stone-700 italic">
-              * Chỉ các cự ly được chọn bên dưới mới bắt lỗi thiếu Size Áo Finisher
+              * Cự ly được chọn: BẮT BUỘC nhập size | Cự ly KHÔNG chọn: Phải ĐỂ TRỐNG (nếu có dữ liệu sẽ BÁO LỖI)
             </span>
           </div>
 
@@ -1671,12 +1671,20 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
                 {/* 14. CỠ ÁO FINISHER */}
                 <div>
-                  <label className="font-bold block mb-1">14. CỠ ÁO FINISHER *</label>
+                  <label className="font-bold block mb-1">
+                    14. CỠ ÁO FINISHER{' '}
+                    {finisherDistances.includes(editFormData.cuLy?.toLowerCase()) ? (
+                      <span className="text-red-600 font-bold">* (Bắt buộc)</span>
+                    ) : (
+                      <span className="text-stone-500 font-normal">(Phải để trống cho cự ly {editFormData.cuLy})</span>
+                    )}
+                  </label>
                   <select
                     value={editFormData.coAoFinisher}
                     onChange={(e) => setEditFormData({ ...editFormData, coAoFinisher: e.target.value })}
                     className="w-full p-2 bg-white border border-[#2D2D2D]"
                   >
+                    <option value="">-- Để trống (Không chọn áo Finisher) --</option>
                     <option value="2XS">2XS</option>
                     <option value="XS">XS</option>
                     <option value="S">S</option>
