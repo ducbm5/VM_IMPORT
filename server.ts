@@ -60,14 +60,6 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Anti-cache headers for all responses to avoid browser/proxy caching issues
-  app.use((_req, res, next) => {
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
-    next();
-  });
-
   app.use(express.json({ limit: "10mb" }));
 
   // Health check endpoint
@@ -96,7 +88,7 @@ async function startServer() {
       if (!targetUrl) {
         return res.status(400).json({
           success: false,
-          message: "Chưa cấu hình Google Apps Script URL. Vui lòng vào /admin hoặc cập nhật Web App URL.",
+          message: "Chưa cấu hình Google Apps Script URL.",
         });
       }
 
@@ -109,27 +101,14 @@ async function startServer() {
         redirect: "follow",
       });
 
-      const text = await gasResponse.text();
-
-      // Kiểm tra nếu Google trả về trang đăng nhập HTML thay vì JSON (khi script chưa được phân quyền 'Anyone')
-      if (text.includes("<!DOCTYPE html>") || text.includes("<html")) {
-        if (text.includes("accounts.google.com") || text.includes("ServiceLogin") || text.includes("Sign in")) {
-          return res.status(401).json({
-            success: false,
-            message: "Google Apps Script yêu cầu đăng nhập. Hãy đảm bảo khi Deploy Web App, bạn chọn 'Who has access' là 'Anyone' (Bất kỳ ai).",
-            raw: text.slice(0, 200),
-          });
-        }
-      }
-
       if (!gasResponse.ok) {
         return res.status(gasResponse.status).json({
           success: false,
-          message: `Google Apps Script trả về mã lỗi HTTP ${gasResponse.status}: ${gasResponse.statusText}`,
-          raw: text.slice(0, 300),
+          message: `Google Apps Script trả về lỗi HTTP ${gasResponse.status}: ${gasResponse.statusText}`,
         });
       }
 
+      const text = await gasResponse.text();
       let data;
       try {
         data = JSON.parse(text);

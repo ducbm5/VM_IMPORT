@@ -62,39 +62,10 @@ export default function App() {
     localStorage.setItem(STORAGE_KEYS.GAS_URL, gasUrl);
   }, [gasUrl]);
 
-  // Xóa toàn bộ Cache cấu hình và khôi phục cài đặt sạch
-  const handleResetCache = async () => {
-    try {
-      localStorage.removeItem(STORAGE_KEYS.GAS_URL);
-      localStorage.removeItem(STORAGE_KEYS.MOCK_MODE);
-      localStorage.removeItem(STORAGE_KEYS.FOLDER_ID);
-      localStorage.removeItem(STORAGE_KEYS.PASS_SHEET_ID);
-      sessionStorage.clear();
-
-      const res = await fetch(`/api/config?t=${Date.now()}`);
-      if (res.ok) {
-        const cfg = await res.json();
-        setGasUrl(cfg.gasUrl || '');
-        setFolderId(cfg.folderId || '1Kjc3UYkNkYaHJQ6JrLZX15QPPWfZEaLZ');
-        setIsMockMode(!cfg.gasUrl);
-      } else {
-        setGasUrl('');
-        setFolderId('1Kjc3UYkNkYaHJQ6JrLZX15QPPWfZEaLZ');
-        setIsMockMode(true);
-      }
-      setSelectedEvent(null);
-      setActiveStep(1);
-      alert('Đã xóa sạch bộ nhớ tạm (Cache) và khôi phục cấu hình mới nhất!');
-    } catch {
-      localStorage.clear();
-      window.location.reload();
-    }
-  };
-
   // Auto-open Admin/Guide modal if URL path is /admin or hash is #admin
   useEffect(() => {
     // Tự động đồng bộ cấu hình mặc định từ server nếu trên máy client chưa có dữ liệu cấu hình
-    fetch(`/api/config?t=${Date.now()}`)
+    fetch('/api/config')
       .then((res) => (res.ok ? res.json() : null))
       .then((cfg) => {
         if (cfg) {
@@ -317,7 +288,6 @@ export default function App() {
         eventsCount={events.length}
         onOpenHistory={() => setIsHistoryOpen(true)}
         showHistoryButton={isStep2Completed}
-        onResetCache={handleResetCache}
       />
 
       {/* Main Container */}
@@ -419,7 +389,6 @@ export default function App() {
               onSelectForRegistration={(eventItem) => setSelectedEvent(eventItem)}
               onGoToStep2={() => setActiveStep(2)}
               selectedEvent={selectedEvent}
-              onResetCache={handleResetCache}
             />
           </div>
         )}

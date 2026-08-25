@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlusCircle, Loader2, CheckCircle2, FileText, ArrowRight, RotateCcw } from 'lucide-react';
+import { PlusCircle, Loader2, CheckCircle2, FileText, ArrowRight } from 'lucide-react';
 import { StatusBanner } from './StatusBanner';
 import { EventItem } from '../types';
 
@@ -10,7 +10,6 @@ interface CreateEventFormProps {
   onSelectForRegistration: (eventItem: EventItem) => void;
   onGoToStep2?: () => void;
   selectedEvent?: EventItem | null;
-  onResetCache?: () => void;
 }
 
 export const CreateEventForm: React.FC<CreateEventFormProps> = ({
@@ -19,7 +18,7 @@ export const CreateEventForm: React.FC<CreateEventFormProps> = ({
   folderId,
   onSelectForRegistration,
   onGoToStep2,
-  onResetCache,
+  selectedEvent,
 }) => {
   const [requester, setRequester] = useState('');
 
@@ -117,25 +116,6 @@ export const CreateEventForm: React.FC<CreateEventFormProps> = ({
             details={statusDetails}
             onClose={() => setStatus('idle')}
           />
-
-          {status === 'error' && onResetCache && (
-            <div className="p-3 bg-[#E5E2D9] border border-[#2D2D2D] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-mono">
-              <span className="text-stone-700">
-                Nếu máy tính bị kẹt cấu hình hoặc phiên cũ, hãy nhấn xóa cache để làm mới:
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  onResetCache();
-                  setStatus('idle');
-                }}
-                className="px-3 py-1.5 bg-[#2D2D2D] hover:bg-[#F8F6F0] hover:text-[#2D2D2D] text-[#F8F6F0] font-bold border border-[#2D2D2D] flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>XÓA SẠCH CACHE & TẢI LẠI</span>
-              </button>
-            </div>
-          )}
 
           {/* Submit Button */}
           <button
